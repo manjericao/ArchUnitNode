@@ -3,8 +3,29 @@
   "version": "0.0.1",
   "description": "A NodeJs architecture test library, to specify and assert architecture rules in plain JS",
   "main": "index.js",
+  "engines": {
+    "node": ">= 12",
+    "npm": ">=6"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "fresh-install": "rm -rf node_modules && npm cache clean --force && npm install",
+    "security": "npm audit --production --audit-level high",
+    "commit": "npx git-cz",
+    "outdated": "npm outdated --depth 0"
+  },
+  "cacheDirectories": [
+    "node_modules"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/manjericao/ArchUnitNode"
+  },
+  "bugs": {
+    "url": "https://github.com/manjericao/ArchUnitNode/issues"
+  },
+  "devDependencies": {
+    "codecrumbs": "~1.7.3"
   },
   "keywords": [],
   "author": "Manjericao Team",
