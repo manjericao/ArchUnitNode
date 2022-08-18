@@ -24,10 +24,20 @@
   "bugs": {
     "url": "https://github.com/manjericao/ArchUnitNode/issues"
   },
-  "devDependencies": {
-    "codecrumbs": "~1.7.3"
+  "dependencies": {
+    "debug": "^4.2.0",
+    "detective": "^5.2.0",
+    "import-all.macro": "^3.1.0"
   },
-  "keywords": [],
+  "devDependencies": {
+    "ava": "~3.12.1"
+  },
+  "keywords": [
+    "architecture",
+    "archunit",
+    "clean",
+    "cleanarchitecture"
+  ],
   "author": "Manjericao Team",
-  "license": "ISC"
+  "license": "MIT"
 }
