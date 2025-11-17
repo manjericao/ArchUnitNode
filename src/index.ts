@@ -19,6 +19,11 @@ import { ArchitectureViolation } from './types';
 export * from './types';
 export type { ClassPredicate } from './types';
 
+// Reports
+export * from './reports';
+export { ReportManager, createReportManager } from './reports';
+export { ReportFormat, ReportOptions, ReportData, ReportMetadata } from './reports/types';
+
 // Parser and Analyzer
 export { TypeScriptParser } from './parser/TypeScriptParser';
 export { CodeAnalyzer } from './analyzer/CodeAnalyzer';

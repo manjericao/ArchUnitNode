@@ -57,6 +57,9 @@ ArchUnit-TS helps you maintain clean architecture in your TypeScript and JavaScr
 - ✅ **Decorator/annotation** checking
 - ✅ **Layered architecture** support
 - ✅ **Cyclic dependency** detection
+- ✅ **Custom predicates** for flexible class filtering
+- ✅ **Report generation** (HTML, JSON, JUnit XML, Markdown)
+- ✅ **CLI tool** for command-line usage
 - ✅ **TypeScript & JavaScript** support
 - ✅ **Integration with Jest** and other test frameworks
 - ✅ **Zero runtime dependencies** in production
@@ -335,10 +338,154 @@ const violations = await archUnit.checkRule(
 ### Ignoring Files
 
 Automatically ignored:
+
 - `node_modules/`
 - `dist/`
 - `build/`
 - `*.d.ts` files
+
+## CLI Usage
+
+The CLI tool allows you to run architecture checks from the command line without writing test code.
+
+### Basic Usage
+
+```bash
+npx archunit-ts check ./src
+```
+
+### Specify Rules File
+
+```bash
+npx archunit-ts check ./src --rules archunit.rules.ts
+```
+
+### Generate Reports
+
+ArchUnit-TS can generate reports in multiple formats:
+
+```bash
+# Generate HTML report
+npx archunit-ts check ./src --format html --output reports/architecture.html
+
+# Generate JSON report
+npx archunit-ts check ./src --format json --output reports/architecture.json
+
+# Generate JUnit XML report (for CI/CD integration)
+npx archunit-ts check ./src --format junit --output reports/architecture.xml
+
+# Generate Markdown report
+npx archunit-ts check ./src --format markdown --output reports/architecture.md
+
+# Custom report title
+npx archunit-ts check ./src --format html --output report.html --report-title "My Project Architecture"
+```
+
+### CLI Options
+
+- `--rules <path>` - Path to rules configuration file
+- `--format <format>` - Report format: html, json, junit, or markdown
+- `--output <path>` - Output path for report
+- `--report-title <title>` - Custom title for the report
+- `--help` - Show help
+- `--version` - Show version
+
+## Report Generation
+
+ArchUnit-TS provides comprehensive reporting capabilities to visualize and share architecture violations.
+
+### Supported Formats
+
+1. **HTML** - Interactive, styled reports with statistics
+2. **JSON** - Machine-readable format for tooling integration
+3. **JUnit XML** - CI/CD integration (Jenkins, GitHub Actions, etc.)
+4. **Markdown** - Documentation and PR integration
+
+### Programmatic API
+
+You can also generate reports programmatically:
+
+```typescript
+import { createArchUnit, createReportManager, ReportFormat, ArchRuleDefinition } from 'archunit-ts';
+
+const archUnit = createArchUnit();
+const reportManager = createReportManager();
+
+// Define and check rules
+const rule = ArchRuleDefinition.classes()
+  .that()
+  .resideInPackage('services')
+  .should()
+  .haveSimpleNameEndingWith('Service');
+
+const violations = await archUnit.checkRule('./src', rule);
+
+// Generate HTML report
+await reportManager.generateReport(violations, {
+  format: ReportFormat.HTML,
+  outputPath: 'reports/architecture.html',
+  title: 'Architecture Report',
+  includeTimestamp: true,
+  includeStats: true,
+});
+
+// Generate multiple reports at once
+await reportManager.generateMultipleReports(
+  violations,
+  [ReportFormat.HTML, ReportFormat.JSON, ReportFormat.JUNIT],
+  'reports/',
+  {
+    title: 'Architecture Analysis',
+  }
+);
+```
+
+### Report Contents
+
+All reports include:
+
+- **Metadata**: Title, timestamp, total violations
+- **Statistics**: Total files affected, rules checked, pass/fail counts
+- **Violations**: Detailed list grouped by file and rule
+- **Source Locations**: File paths and line numbers for each violation
+
+### HTML Report Features
+
+- Clean, responsive design
+- Color-coded statistics
+- Violations grouped by file
+- Direct links to source code locations
+- Success indicators when no violations found
+
+### CI/CD Integration
+
+Use JUnit format for seamless CI/CD integration:
+
+```yaml
+# GitHub Actions example
+- name: Run Architecture Tests
+  run: npx archunit-ts check ./src --format junit --output reports/architecture.xml
+
+- name: Publish Test Results
+  uses: EnricoMi/publish-unit-test-result-action@v2
+  if: always()
+  with:
+    files: reports/architecture.xml
+```
+
+```groovy
+// Jenkins Pipeline example
+stage('Architecture Tests') {
+  steps {
+    sh 'npx archunit-ts check ./src --format junit --output reports/architecture.xml'
+  }
+  post {
+    always {
+      junit 'reports/architecture.xml'
+    }
+  }
+}
+```
 
 ## Best Practices
 
@@ -347,6 +494,7 @@ Automatically ignored:
 3. **Start Small**: Begin with simple rules and expand gradually
 4. **Document Intent**: Use clear, descriptive rule definitions
 5. **Fail Fast**: Configure tests to fail on first violation for faster feedback
+6. **Generate Reports**: Use reports to communicate violations to your team
 
 ## Examples
 

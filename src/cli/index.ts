@@ -5,7 +5,7 @@
  */
 
 import * as path from 'path';
-import { createArchUnit } from '../index';
+import { createArchUnit, createReportManager, ReportFormat } from '../index';
 import { createDefaultConfig } from '../config/ConfigLoader';
 import { formatViolations, formatSummary } from '../utils/ViolationFormatter';
 
@@ -17,6 +17,9 @@ interface CLIOptions {
   noContext?: boolean;
   verbose?: boolean;
   typescript?: boolean;
+  format?: string;
+  output?: string;
+  reportTitle?: string;
 }
 
 /**
@@ -62,6 +65,20 @@ function parseArgs(): { command: string; options: CLIOptions } {
       case '--ts':
         options.typescript = true;
         break;
+      case '--format':
+      case '-f':
+        options.format = next;
+        i++;
+        break;
+      case '--output':
+      case '-o':
+        options.output = next;
+        i++;
+        break;
+      case '--report-title':
+        options.reportTitle = next;
+        i++;
+        break;
       default:
         if (arg.startsWith('-')) {
           console.error(`Unknown option: ${arg}`);
@@ -90,13 +107,16 @@ Commands:
   help         Show this help message
 
 Options:
-  --config, -c <path>     Path to configuration file (default: archunit.config.js)
-  --base-path, -b <path>  Base path for code analysis
-  --pattern, -p <pattern> File patterns to include (can be used multiple times)
-  --no-color              Disable colored output
-  --no-context            Disable code context in violations
-  --typescript, --ts      Generate TypeScript config (for init command)
-  --verbose, -v           Show verbose output
+  --config, -c <path>      Path to configuration file (default: archunit.config.js)
+  --base-path, -b <path>   Base path for code analysis
+  --pattern, -p <pattern>  File patterns to include (can be used multiple times)
+  --format, -f <format>    Generate report (html, json, junit, markdown)
+  --output, -o <path>      Output path for generated report
+  --report-title <title>   Title for the generated report
+  --no-color               Disable colored output
+  --no-context             Disable code context in violations
+  --typescript, --ts       Generate TypeScript config (for init command)
+  --verbose, -v            Show verbose output
 
 Examples:
   # Check rules using default config
@@ -104,6 +124,15 @@ Examples:
 
   # Check with custom config
   archunit check --config ./custom-archunit.config.js
+
+  # Generate HTML report
+  archunit check --format html --output ./reports/archunit-report.html
+
+  # Generate multiple reports
+  archunit check --format json --output ./reports/report.json
+
+  # Generate JUnit XML for CI/CD
+  archunit check --format junit --output ./test-results/archunit.xml
 
   # Initialize a new config file
   archunit init
@@ -146,6 +175,11 @@ async function runCheck(options: CLIOptions): Promise<void> {
 
     console.log(summary);
 
+    // Generate report if requested
+    if (options.format && options.output) {
+      await generateReport(violations, options);
+    }
+
     // Exit with error code if there are violations
     if (violations.length > 0) {
       process.exit(1);
@@ -156,6 +190,49 @@ async function runCheck(options: CLIOptions): Promise<void> {
       console.error(error.stack);
     }
     process.exit(1);
+  }
+}
+
+/**
+ * Generate report from violations
+ */
+async function generateReport(violations: any[], options: CLIOptions): Promise<void> {
+  const reportManager = createReportManager();
+  const formatMap: Record<string, ReportFormat> = {
+    html: ReportFormat.HTML,
+    json: ReportFormat.JSON,
+    junit: ReportFormat.JUNIT,
+    markdown: ReportFormat.MARKDOWN,
+    md: ReportFormat.MARKDOWN,
+    xml: ReportFormat.JUNIT,
+  };
+
+  const format = formatMap[options.format!.toLowerCase()];
+  if (!format) {
+    console.error(
+      `Invalid report format: ${options.format}. Supported formats: html, json, junit, markdown`
+    );
+    process.exit(1);
+  }
+
+  try {
+    const outputPath = await reportManager.generateReport(violations, {
+      format,
+      outputPath: options.output!,
+      title: options.reportTitle || 'ArchUnit Architecture Report',
+      includeTimestamp: true,
+      includeStats: true,
+    });
+
+    console.log(`\n✓ Report generated: ${path.relative(process.cwd(), outputPath)}`);
+  } catch (error) {
+    console.error(
+      'Failed to generate report:',
+      error instanceof Error ? error.message : String(error)
+    );
+    if (options.verbose && error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
   }
 }
 
