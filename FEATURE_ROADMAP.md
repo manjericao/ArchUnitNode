@@ -6,7 +6,7 @@ Based on deep analysis, ArchUnit-TS has **excellent architecture** and has recei
 
 ## 🎉 Implementation Summary
 
-### ✅ COMPLETED (16 major features)
+### ✅ COMPLETED (18 major features)
 
 1. **Fixed Dependency Analysis** - Critical bug fix, all dependency rules now work
 2. **3-Tier Caching System** - 60-80% performance improvement on repeated runs
@@ -24,6 +24,8 @@ Based on deep analysis, ArchUnit-TS has **excellent architecture** and has recei
 14. **Custom Predicates in API** - User-defined filter functions for maximum flexibility
 15. **Report Generation** - Multi-format reports (HTML, JSON, JUnit XML, Markdown)
 16. **Watch Mode** - Automatic re-checking on file changes with instant feedback
+17. **Severity Levels** - Error vs warning violations for flexible enforcement
+18. **Dependency Graph Visualization** - Interactive HTML and Graphviz DOT format graphs
 
 ### ⏳ REMAINING HIGH-VALUE FEATURES
 

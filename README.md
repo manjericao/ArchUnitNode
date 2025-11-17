@@ -58,6 +58,7 @@ ArchUnit-TS helps you maintain clean architecture in your TypeScript and JavaScr
 - ✅ **Layered architecture** support
 - ✅ **Cyclic dependency** detection
 - ✅ **Custom predicates** for flexible class filtering
+- ✅ **Dependency graph visualization** (interactive HTML and Graphviz DOT formats)
 - ✅ **Report generation** (HTML, JSON, JUnit XML, Markdown)
 - ✅ **CLI tool** for command-line usage
 - ✅ **Watch mode** for automatic re-checking on file changes
@@ -450,11 +451,118 @@ Watch mode features:
 - `--format <format>` - Report format: html, json, junit, or markdown
 - `--output <path>` - Output path for report
 - `--report-title <title>` - Custom title for the report
+- `--graph-type <type>` - Graph format: dot or html (for graph command)
+- `--graph-title <title>` - Custom title for the graph
+- `--direction <dir>` - Graph direction: LR, TB, RL, or BT (for DOT graphs)
+- `--include-interfaces` - Include interfaces in dependency graph
+- `--width <pixels>` - Graph width for HTML output (default: 1200)
+- `--height <pixels>` - Graph height for HTML output (default: 800)
 - `--no-color` - Disable colored output
 - `--no-context` - Disable code context in violations
 - `--verbose, -v` - Show verbose output
 - `--help` - Show help
 - `--version` - Show version
+
+## Dependency Graph Visualization
+
+ArchUnit-TS can generate visual dependency graphs to help you understand and analyze your codebase structure.
+
+### Interactive HTML Graph
+
+Generate an interactive, D3.js-powered dependency graph that you can explore in your browser:
+
+```bash
+# Generate interactive HTML graph
+archunit-ts graph --graph-type html --output ./docs/dependencies.html
+
+# With custom options
+archunit-ts graph --graph-type html --output ./graph.html \
+  --graph-title "My Project Dependencies" \
+  --width 1600 --height 900 \
+  --include-interfaces
+```
+
+Features of the HTML graph:
+
+- **Interactive exploration** - Click and drag nodes, zoom and pan
+- **Real-time filtering** - Filter by node type or violations
+- **Physics simulation** - Adjustable force-directed layout
+- **Detailed tooltips** - Hover to see dependencies and metadata
+- **Cycle detection** - Automatically highlights if cycles are present
+- **Color-coded nodes** - Different colors for classes, interfaces, and violations
+
+### Graphviz DOT Format
+
+Generate DOT files for use with Graphviz to create publication-quality diagrams:
+
+```bash
+# Generate DOT file
+archunit-ts graph --graph-type dot --output ./docs/dependencies.dot
+
+# Convert to PNG using Graphviz (requires graphviz installation)
+dot -Tpng ./docs/dependencies.dot -o ./docs/dependencies.png
+
+# Convert to SVG
+dot -Tsvg ./docs/dependencies.dot -o ./docs/dependencies.svg
+
+# With custom layout direction
+archunit-ts graph --graph-type dot --output ./graph.dot --direction LR
+```
+
+DOT graph features:
+
+- **Module clustering** - Nodes grouped by module/package
+- **Relationship types** - Different styles for inheritance, implementation, and imports
+- **Metadata labels** - Shows decorators and abstract classes
+- **Violation highlighting** - Nodes with violations are highlighted in red
+
+### Programmatic API
+
+Generate graphs programmatically in your code:
+
+```typescript
+import { createArchUnit } from 'archunit-ts';
+
+const archUnit = createArchUnit();
+
+// Generate interactive HTML graph
+await archUnit.generateHtmlGraph('./src', './docs/graph.html', {
+  graphOptions: {
+    title: 'My Application Architecture',
+    width: 1600,
+    height: 900,
+    showLegend: true,
+    enablePhysics: true,
+  },
+  builderOptions: {
+    includeInterfaces: true,
+  },
+});
+
+// Generate DOT graph
+await archUnit.generateDotGraph('./src', './docs/graph.dot', {
+  graphOptions: {
+    title: 'Dependency Graph',
+    direction: 'LR',
+    clusterByModule: true,
+    useColors: true,
+  },
+});
+
+// Work with the graph data structure
+const graph = await archUnit.createDependencyGraph('./src');
+const stats = graph.getStats();
+console.log(`Nodes: ${stats.nodeCount}, Edges: ${stats.edgeCount}`);
+console.log(`Has cycles: ${stats.hasCycles}`);
+```
+
+### Use Cases
+
+- **Onboarding** - Help new team members understand the codebase structure
+- **Architecture reviews** - Visualize actual vs intended architecture
+- **Refactoring planning** - Identify highly coupled modules
+- **Documentation** - Auto-generate architecture diagrams
+- **Cycle detection** - Find and eliminate circular dependencies
 
 ## Report Generation
 

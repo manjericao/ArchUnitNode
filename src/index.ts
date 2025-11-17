@@ -14,6 +14,9 @@ import { ArchRule } from './core/ArchRule';
 import { CodeAnalyzer } from './analyzer/CodeAnalyzer';
 import { ArchRuleDefinition, StaticArchRule } from './lang/ArchRuleDefinition';
 import { ArchitectureViolation } from './types';
+import { DependencyGraph, GraphBuilder, DotGenerator, HtmlGraphGenerator } from './graph';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Types
 export * from './types';
@@ -64,6 +67,21 @@ export {
   formatSummary,
   FormatOptions,
 } from './utils/ViolationFormatter';
+
+// Graph Visualization
+export {
+  DependencyGraph,
+  DependencyType,
+  GraphNode,
+  GraphEdge,
+  GraphFilter,
+  GraphBuilder,
+  GraphBuilderOptions,
+  DotGenerator,
+  DotGeneratorOptions,
+  HtmlGraphGenerator,
+  HtmlGraphOptions,
+} from './graph';
 
 // Convenience exports for common patterns
 export const { classes, noClasses, allClasses } = ArchRuleDefinition;
@@ -158,6 +176,119 @@ export class ArchUnitTS {
     }
 
     return violations;
+  }
+
+  /**
+   * Generate a dependency graph from analyzed code
+   */
+  public async createDependencyGraph(
+    basePath: string,
+    patterns?: string[],
+    options?: {
+      includeInterfaces?: boolean;
+      includeFunctions?: boolean;
+      includeModules?: boolean;
+    }
+  ): Promise<DependencyGraph> {
+    const classes = await this.analyzeCode(basePath, patterns);
+    const builder = new GraphBuilder(options);
+    return builder.build(classes);
+  }
+
+  /**
+   * Generate a DOT format graph (for Graphviz)
+   */
+  public async generateDotGraph(
+    basePath: string,
+    outputPath: string,
+    options?: {
+      patterns?: string[];
+      graphOptions?: {
+        direction?: 'LR' | 'TB' | 'RL' | 'BT';
+        title?: string;
+        showMetadata?: boolean;
+        useColors?: boolean;
+        clusterByModule?: boolean;
+      };
+      builderOptions?: {
+        includeInterfaces?: boolean;
+        includeFunctions?: boolean;
+        includeModules?: boolean;
+      };
+      violations?: ArchitectureViolation[];
+    }
+  ): Promise<string> {
+    const graph = await this.createDependencyGraph(
+      basePath,
+      options?.patterns,
+      options?.builderOptions
+    );
+
+    const generator = new DotGenerator({
+      ...options?.graphOptions,
+      violations: options?.violations,
+    });
+
+    const dotContent = generator.generate(graph);
+
+    // Ensure output directory exists
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Write DOT file
+    fs.writeFileSync(outputPath, dotContent, 'utf-8');
+
+    return outputPath;
+  }
+
+  /**
+   * Generate an interactive HTML graph
+   */
+  public async generateHtmlGraph(
+    basePath: string,
+    outputPath: string,
+    options?: {
+      patterns?: string[];
+      graphOptions?: {
+        title?: string;
+        width?: number;
+        height?: number;
+        showLegend?: boolean;
+        enablePhysics?: boolean;
+      };
+      builderOptions?: {
+        includeInterfaces?: boolean;
+        includeFunctions?: boolean;
+        includeModules?: boolean;
+      };
+      violations?: ArchitectureViolation[];
+    }
+  ): Promise<string> {
+    const graph = await this.createDependencyGraph(
+      basePath,
+      options?.patterns,
+      options?.builderOptions
+    );
+
+    const generator = new HtmlGraphGenerator({
+      ...options?.graphOptions,
+      violations: options?.violations,
+    });
+
+    const htmlContent = generator.generate(graph);
+
+    // Ensure output directory exists
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Write HTML file
+    fs.writeFileSync(outputPath, htmlContent, 'utf-8');
+
+    return outputPath;
   }
 }
 
