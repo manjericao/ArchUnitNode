@@ -1,10 +1,9 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { glob } from 'glob';
 import { TypeScriptParser } from '../parser/TypeScriptParser';
 import { TSModule, Dependency } from '../types';
 import { TSClasses } from '../core/TSClasses';
 import { TSClass } from '../core/TSClass';
+import { CacheManager, getGlobalCache } from '../cache/CacheManager';
 
 /**
  * Analyzes TypeScript/JavaScript codebases
@@ -13,11 +12,15 @@ export class CodeAnalyzer {
   private parser: TypeScriptParser;
   private modules: Map<string, TSModule>;
   private dependencies: Dependency[];
+  private cache: CacheManager;
+  private enableCache: boolean;
 
-  constructor() {
+  constructor(options: { enableCache?: boolean; cache?: CacheManager } = {}) {
     this.parser = new TypeScriptParser();
     this.modules = new Map();
     this.dependencies = [];
+    this.enableCache = options.enableCache !== false; // Default to true
+    this.cache = options.cache || getGlobalCache();
   }
 
   /**
@@ -30,11 +33,27 @@ export class CodeAnalyzer {
     const files = await this.findFiles(basePath, patterns);
     const classes: TSClass[] = [];
 
-    // Parse files in parallel for better performance
+    // Parse files in parallel for better performance, using cache
     const parseResults = await Promise.allSettled(
       files.map(async (file) => {
         try {
-          const module = this.parser.parseFile(file);
+          // Try to get from cache first
+          let module: TSModule | null = null;
+
+          if (this.enableCache) {
+            module = this.cache.getAST(file);
+          }
+
+          // If not in cache, parse the file
+          if (!module) {
+            module = this.parser.parseFile(file);
+
+            // Cache the parsed AST
+            if (this.enableCache && module) {
+              this.cache.setAST(file, module);
+            }
+          }
+
           return { file, module, error: null };
         } catch (error) {
           return { file, module: null, error };
@@ -195,5 +214,26 @@ export class CodeAnalyzer {
     }
 
     return graph;
+  }
+
+  /**
+   * Clear all caches
+   */
+  public clearCache(): void {
+    this.cache.clearAll();
+  }
+
+  /**
+   * Get cache statistics
+   */
+  public getCacheStats() {
+    return this.cache.getStats();
+  }
+
+  /**
+   * Enable or disable caching
+   */
+  public setCacheEnabled(enabled: boolean): void {
+    this.enableCache = enabled;
   }
 }
