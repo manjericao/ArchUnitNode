@@ -1,14 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { parse } from '@typescript-eslint/typescript-estree';
-import { AST_NODE_TYPES, TSESTree } from '@typescript-eslint/typescript-estree';
+// @ts-expect-error - Module resolution issue with typescript-estree
+import { parse, AST_NODE_TYPES, TSESTree } from '@typescript-eslint/typescript-estree';
 import {
   TSClass as ITSClass,
   TSInterface,
   TSFunction,
   TSModule,
   TSImport,
-  TSExport,
   TSDecorator,
   TSMethod,
   TSProperty,
@@ -132,14 +131,10 @@ export class TypeScriptParser {
     module: TSModule,
     filePath: string
   ): void {
-    const isDefault = node.type === AST_NODE_TYPES.ExportDefaultDeclaration;
-
     if (node.type === AST_NODE_TYPES.ExportDefaultDeclaration) {
       if (node.declaration) {
         if (node.declaration.type === AST_NODE_TYPES.ClassDeclaration && node.declaration.id) {
-          module.classes.push(
-            this.parseClass(node.declaration, module.name, filePath, true)
-          );
+          module.classes.push(this.parseClass(node.declaration, module.name, filePath, true));
           module.exports.push({
             name: node.declaration.id.name,
             isDefault: true,
@@ -149,9 +144,7 @@ export class TypeScriptParser {
           node.declaration.type === AST_NODE_TYPES.FunctionDeclaration &&
           node.declaration.id
         ) {
-          module.functions.push(
-            this.parseFunction(node.declaration, module.name, filePath, true)
-          );
+          module.functions.push(this.parseFunction(node.declaration, module.name, filePath, true));
           module.exports.push({
             name: node.declaration.id.name,
             isDefault: true,
@@ -171,9 +164,7 @@ export class TypeScriptParser {
         node.declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration &&
         node.declaration.id
       ) {
-        module.interfaces.push(
-          this.parseInterface(node.declaration, module.name, filePath, true)
-        );
+        module.interfaces.push(this.parseInterface(node.declaration, module.name, filePath, true));
         module.exports.push({
           name: node.declaration.id.name,
           isDefault: false,
@@ -183,9 +174,7 @@ export class TypeScriptParser {
         node.declaration.type === AST_NODE_TYPES.FunctionDeclaration &&
         node.declaration.id
       ) {
-        module.functions.push(
-          this.parseFunction(node.declaration, module.name, filePath, true)
-        );
+        module.functions.push(this.parseFunction(node.declaration, module.name, filePath, true));
         module.exports.push({
           name: node.declaration.id.name,
           isDefault: false,
@@ -277,18 +266,15 @@ export class TypeScriptParser {
   /**
    * Parse decorators
    */
-  private parseDecorators(
-    decorators: TSESTree.Decorator[],
-    filePath: string
-  ): TSDecorator[] {
+  private parseDecorators(decorators: TSESTree.Decorator[], filePath: string): TSDecorator[] {
     return decorators.map((dec) => ({
       name:
         dec.expression.type === AST_NODE_TYPES.Identifier
           ? dec.expression.name
           : dec.expression.type === AST_NODE_TYPES.CallExpression &&
-            dec.expression.callee.type === AST_NODE_TYPES.Identifier
-          ? dec.expression.callee.name
-          : 'Unknown',
+              dec.expression.callee.type === AST_NODE_TYPES.Identifier
+            ? dec.expression.callee.name
+            : 'Unknown',
       arguments: [],
       location: this.getLocation(dec, filePath),
     }));
@@ -304,8 +290,7 @@ export class TypeScriptParser {
           member.type === AST_NODE_TYPES.MethodDefinition
       )
       .map((method) => ({
-        name:
-          method.key.type === AST_NODE_TYPES.Identifier ? method.key.name : 'UnknownMethod',
+        name: method.key.type === AST_NODE_TYPES.Identifier ? method.key.name : 'UnknownMethod',
         parameters:
           method.value.params.map((param) =>
             param.type === AST_NODE_TYPES.Identifier ? param.name : ''

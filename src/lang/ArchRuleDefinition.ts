@@ -1,5 +1,4 @@
 import { TSClasses } from '../core/TSClasses';
-import { ClassesThat } from './syntax/ClassesThat';
 import { ClassesShould } from './syntax/ClassesShould';
 
 /**
@@ -177,52 +176,40 @@ export class ClassesShouldStatic {
    * Classes should be annotated with a decorator
    */
   public beAnnotatedWith(decoratorName: string): StaticArchRule {
-    return new StaticArchRule(
-      (classes) => {
-        const filtered = this.applyFilters(classes);
-        return new ClassesShould(filtered).beAnnotatedWith(decoratorName);
-      },
-      `Classes should be annotated with '@${decoratorName}'`
-    );
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).beAnnotatedWith(decoratorName);
+    }, `Classes should be annotated with '@${decoratorName}'`);
   }
 
   /**
    * Classes should NOT be annotated with a decorator
    */
   public notBeAnnotatedWith(decoratorName: string): StaticArchRule {
-    return new StaticArchRule(
-      (classes) => {
-        const filtered = this.applyFilters(classes);
-        return new ClassesShould(filtered).notBeAnnotatedWith(decoratorName);
-      },
-      `Classes should not be annotated with '@${decoratorName}'`
-    );
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).notBeAnnotatedWith(decoratorName);
+    }, `Classes should not be annotated with '@${decoratorName}'`);
   }
 
   /**
    * Classes should have names matching a pattern
    */
   public haveSimpleNameMatching(pattern: RegExp | string): StaticArchRule {
-    return new StaticArchRule(
-      (classes) => {
-        const filtered = this.applyFilters(classes);
-        return new ClassesShould(filtered).haveSimpleNameMatching(pattern);
-      },
-      `Classes should have simple name matching '${pattern}'`
-    );
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveSimpleNameMatching(pattern);
+    }, `Classes should have simple name matching '${pattern}'`);
   }
 
   /**
    * Classes should have names ending with a suffix
    */
   public haveSimpleNameEndingWith(suffix: string): StaticArchRule {
-    return new StaticArchRule(
-      (classes) => {
-        const filtered = this.applyFilters(classes);
-        return new ClassesShould(filtered).haveSimpleNameEndingWith(suffix);
-      },
-      `Classes should have simple name ending with '${suffix}'`
-    );
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveSimpleNameEndingWith(suffix);
+    }, `Classes should have simple name ending with '${suffix}'`);
   }
 
   /**
