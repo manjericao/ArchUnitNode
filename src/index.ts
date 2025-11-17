@@ -30,6 +30,7 @@ export { ReportFormat, ReportOptions, ReportData, ReportMetadata } from './repor
 // Parser and Analyzer
 export { TypeScriptParser } from './parser/TypeScriptParser';
 export { CodeAnalyzer } from './analyzer/CodeAnalyzer';
+export type { ParseError, AnalysisResult } from './analyzer/CodeAnalyzer';
 
 // Fluent API
 export { ArchRuleDefinition, StaticArchRule } from './lang/ArchRuleDefinition';

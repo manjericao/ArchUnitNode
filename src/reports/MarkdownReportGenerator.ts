@@ -1,4 +1,5 @@
 import { ReportGenerator, ReportData, ReportOptions } from './types';
+import { ArchitectureViolation } from '../types';
 
 /**
  * Generates Markdown reports for documentation and PRs
@@ -81,8 +82,8 @@ export class MarkdownReportGenerator implements ReportGenerator {
     return '.md';
   }
 
-  private groupByFile(violations: any[]): Map<string, any[]> {
-    const grouped = new Map<string, any[]>();
+  private groupByFile(violations: ArchitectureViolation[]): Map<string, ArchitectureViolation[]> {
+    const grouped = new Map<string, ArchitectureViolation[]>();
 
     for (const violation of violations) {
       const file = violation.filePath;

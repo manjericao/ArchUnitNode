@@ -1,4 +1,5 @@
 import { ReportGenerator, ReportData, ReportOptions } from './types';
+import { ArchitectureViolation, SourceLocation } from '../types';
 
 /**
  * Generates JSON reports for machine-readable output
@@ -47,8 +48,13 @@ export class JsonReportGenerator implements ReportGenerator {
     return '.json';
   }
 
-  private groupByFile(violations: any[]): Record<string, any[]> {
-    const grouped: Record<string, any[]> = {};
+  private groupByFile(
+    violations: ArchitectureViolation[]
+  ): Record<string, Array<{ message: string; rule: string; location?: SourceLocation }>> {
+    const grouped: Record<
+      string,
+      Array<{ message: string; rule: string; location?: SourceLocation }>
+    > = {};
 
     for (const violation of violations) {
       const file = violation.filePath;
@@ -65,8 +71,13 @@ export class JsonReportGenerator implements ReportGenerator {
     return grouped;
   }
 
-  private groupByRule(violations: any[]): Record<string, any[]> {
-    const grouped: Record<string, any[]> = {};
+  private groupByRule(
+    violations: ArchitectureViolation[]
+  ): Record<string, Array<{ message: string; filePath: string; location?: SourceLocation }>> {
+    const grouped: Record<
+      string,
+      Array<{ message: string; filePath: string; location?: SourceLocation }>
+    > = {};
 
     for (const violation of violations) {
       const rule = violation.rule;

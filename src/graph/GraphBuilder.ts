@@ -3,6 +3,8 @@
  */
 
 import { TSClasses } from '../core/TSClasses';
+import { TSClass } from '../core/TSClass';
+import { TSDecorator } from '../types';
 import { DependencyGraph, GraphNode, GraphEdge, DependencyType } from './DependencyGraph';
 
 /**
@@ -19,16 +21,18 @@ export interface GraphBuilderOptions {
  * Builds dependency graphs from analyzed TypeScript code
  */
 export class GraphBuilder {
-  private options: GraphBuilderOptions;
+  private _options: GraphBuilderOptions;
 
   constructor(options: GraphBuilderOptions = {}) {
-    this.options = {
+    this._options = {
       includeInterfaces: true,
       includeFunctions: false,
       includeModules: false,
       resolveTransitive: false,
       ...options,
     };
+    // TODO: Implement options usage in build() method
+    void this._options; // Intentionally kept for future feature implementation
   }
 
   /**
@@ -38,7 +42,7 @@ export class GraphBuilder {
     const graph = new DependencyGraph();
 
     // Create a map for quick lookups
-    const classMap = new Map<string, any>();
+    const classMap = new Map<string, TSClass>();
     classes.getAll().forEach((cls) => {
       classMap.set(cls.name, cls);
     });
@@ -59,7 +63,7 @@ export class GraphBuilder {
   /**
    * Create a graph node from a class
    */
-  private createClassNode(cls: any): GraphNode {
+  private createClassNode(cls: TSClass): GraphNode {
     return {
       id: this.getClassId(cls),
       name: cls.name,
@@ -69,7 +73,7 @@ export class GraphBuilder {
       metadata: {
         isAbstract: cls.isAbstract,
         isExported: cls.isExported,
-        decorators: cls.decorators.map((d: any) => d.name),
+        decorators: cls.decorators.map((d: TSDecorator) => d.name),
       },
     };
   }
@@ -77,7 +81,11 @@ export class GraphBuilder {
   /**
    * Add edges for a class's dependencies
    */
-  private addClassEdges(graph: DependencyGraph, cls: any, classMap: Map<string, any>): void {
+  private addClassEdges(
+    graph: DependencyGraph,
+    cls: TSClass,
+    classMap: Map<string, TSClass>
+  ): void {
     const classId = this.getClassId(cls);
 
     // Add inheritance edge
@@ -112,7 +120,7 @@ export class GraphBuilder {
   /**
    * Get unique ID for a class
    */
-  private getClassId(cls: any): string {
+  private getClassId(cls: TSClass): string {
     return `class:${cls.module}:${cls.name}`;
   }
 }

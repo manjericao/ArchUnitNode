@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-// @ts-expect-error - Module resolution issue with typescript-estree
+// @ts-expect-error - Types exist but moduleResolution: "node" doesn't resolve modern "exports" field
+// TODO: Update to moduleResolution: "node16" once we can migrate to ES modules
 import { parse, AST_NODE_TYPES, TSESTree } from '@typescript-eslint/typescript-estree';
 import {
   TSClass as ITSClass,
@@ -19,9 +20,54 @@ import {
  */
 export class TypeScriptParser {
   /**
+   * Validate that a file path is safe to read (prevents path traversal attacks)
+   * @param filePath The file path to validate
+   * @throws Error if path contains suspicious patterns
+   */
+  private validateFilePath(filePath: string): void {
+    const normalized = path.normalize(filePath);
+    const resolved = path.resolve(filePath);
+
+    // Check for path traversal attempts
+    if (
+      normalized.includes('..') ||
+      normalized !== resolved.replace(process.cwd() + path.sep, '')
+    ) {
+      // Additional check: ensure resolved path doesn't escape working directory for relative paths
+      if (!path.isAbsolute(filePath)) {
+        const cwd = process.cwd();
+        if (!resolved.startsWith(cwd)) {
+          throw new Error(`Path traversal detected: ${filePath}`);
+        }
+      }
+    }
+
+    // Check for null bytes (can bypass security checks in some systems)
+    if (filePath.includes('\0')) {
+      throw new Error(`Invalid file path (null byte): ${filePath}`);
+    }
+
+    // Verify file exists and is actually a file
+    try {
+      const stats = fs.statSync(resolved);
+      if (!stats.isFile()) {
+        throw new Error(`Path is not a file: ${filePath}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error(`File does not exist: ${filePath}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Parse a single file
    */
   public parseFile(filePath: string): TSModule {
+    // Validate file path for security
+    this.validateFilePath(filePath);
+
     const content = fs.readFileSync(filePath, 'utf-8');
     const ast = parse(content, {
       loc: true,
@@ -60,7 +106,7 @@ export class TypeScriptParser {
   private visitNode(node: TSESTree.Node, module: TSModule, filePath: string): void {
     switch (node.type) {
       case AST_NODE_TYPES.Program:
-        node.body.forEach((stmt) => this.visitNode(stmt, module, filePath));
+        node.body.forEach((stmt: TSESTree.Node) => this.visitNode(stmt, module, filePath));
         break;
 
       case AST_NODE_TYPES.ImportDeclaration:
@@ -102,7 +148,7 @@ export class TypeScriptParser {
     let isDefault = false;
     let isNamespace = false;
 
-    node.specifiers.forEach((spec) => {
+    node.specifiers.forEach((spec: TSESTree.ImportClause) => {
       if (spec.type === AST_NODE_TYPES.ImportDefaultSpecifier) {
         specifiers.push(spec.local.name);
         isDefault = true;
@@ -205,7 +251,7 @@ export class TypeScriptParser {
         extendsClause && extendsClause.type === AST_NODE_TYPES.Identifier
           ? extendsClause.name
           : undefined,
-      implements: implementsClauses.map((impl) =>
+      implements: implementsClauses.map((impl: TSESTree.TSClassImplements) =>
         impl.expression.type === AST_NODE_TYPES.Identifier ? impl.expression.name : ''
       ),
       decorators: this.parseDecorators(node.decorators || [], filePath),
@@ -230,7 +276,7 @@ export class TypeScriptParser {
       name: node.id.name,
       filePath,
       module: moduleName,
-      extends: (node.extends || []).map((ext) =>
+      extends: (node.extends || []).map((ext: TSESTree.TSInterfaceHeritage) =>
         ext.expression.type === AST_NODE_TYPES.Identifier ? ext.expression.name : ''
       ),
       methods: [],
@@ -253,7 +299,7 @@ export class TypeScriptParser {
       name: node.id?.name || 'AnonymousFunction',
       filePath,
       module: moduleName,
-      parameters: node.params.map((param) =>
+      parameters: node.params.map((param: TSESTree.Parameter) =>
         param.type === AST_NODE_TYPES.Identifier ? param.name : ''
       ),
       returnType: undefined,
@@ -292,7 +338,7 @@ export class TypeScriptParser {
       .map((method) => ({
         name: method.key.type === AST_NODE_TYPES.Identifier ? method.key.name : 'UnknownMethod',
         parameters:
-          method.value.params.map((param) =>
+          method.value.params.map((param: TSESTree.Parameter) =>
             param.type === AST_NODE_TYPES.Identifier ? param.name : ''
           ) || [],
         returnType: undefined,

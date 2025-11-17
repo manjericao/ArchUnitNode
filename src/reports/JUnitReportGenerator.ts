@@ -1,4 +1,5 @@
 import { ReportGenerator, ReportData, ReportOptions } from './types';
+import { ArchitectureViolation } from '../types';
 
 /**
  * Generates JUnit XML reports for CI/CD integration
@@ -54,8 +55,8 @@ export class JUnitReportGenerator implements ReportGenerator {
     return '.xml';
   }
 
-  private groupByFile(violations: any[]): Map<string, any[]> {
-    const grouped = new Map<string, any[]>();
+  private groupByFile(violations: ArchitectureViolation[]): Map<string, ArchitectureViolation[]> {
+    const grouped = new Map<string, ArchitectureViolation[]>();
 
     for (const violation of violations) {
       const file = violation.filePath;

@@ -22,14 +22,24 @@ interface CacheEntry<T> {
 export class CacheManager {
   private astCache: Map<string, CacheEntry<TSModule>>;
   private moduleCache: Map<string, CacheEntry<TSClass[]>>;
-  private ruleCache: Map<string, CacheEntry<any>>;
+  private ruleCache: Map<string, CacheEntry<unknown>>;
   private maxCacheSize: number;
   private cacheTTL: number; // Time to live in milliseconds
 
-  constructor(options: {
-    maxCacheSize?: number;
-    cacheTTL?: number;
-  } = {}) {
+  // Hit/miss tracking for accurate hit rate calculation
+  private astHits = 0;
+  private astMisses = 0;
+  private moduleHits = 0;
+  private moduleMisses = 0;
+  private ruleHits = 0;
+  private ruleMisses = 0;
+
+  constructor(
+    options: {
+      maxCacheSize?: number;
+      cacheTTL?: number;
+    } = {}
+  ) {
     this.astCache = new Map();
     this.moduleCache = new Map();
     this.ruleCache = new Map();
@@ -44,12 +54,14 @@ export class CacheManager {
     const entry = this.astCache.get(filePath);
 
     if (!entry) {
+      this.astMisses++;
       return null;
     }
 
     // Check if cache is still valid
     if (!this.isValid(entry)) {
       this.astCache.delete(filePath);
+      this.astMisses++;
       return null;
     }
 
@@ -57,9 +69,11 @@ export class CacheManager {
     const currentHash = this.getFileHash(filePath);
     if (currentHash !== entry.hash) {
       this.astCache.delete(filePath);
+      this.astMisses++;
       return null;
     }
 
+    this.astHits++;
     return entry.data;
   }
 
@@ -86,9 +100,11 @@ export class CacheManager {
 
     if (!entry || !this.isValid(entry)) {
       this.moduleCache.delete(key);
+      this.moduleMisses++;
       return null;
     }
 
+    this.moduleHits++;
     return entry.data;
   }
 
@@ -108,21 +124,23 @@ export class CacheManager {
   /**
    * Tier 3: Get cached rule evaluation
    */
-  public getRuleEvaluation(ruleKey: string): any | null {
+  public getRuleEvaluation(ruleKey: string): unknown | null {
     const entry = this.ruleCache.get(ruleKey);
 
     if (!entry || !this.isValid(entry)) {
       this.ruleCache.delete(ruleKey);
+      this.ruleMisses++;
       return null;
     }
 
+    this.ruleHits++;
     return entry.data;
   }
 
   /**
    * Tier 3: Cache rule evaluation
    */
-  public setRuleEvaluation(ruleKey: string, result: any): void {
+  public setRuleEvaluation(ruleKey: string, result: unknown): void {
     this.ruleCache.set(ruleKey, {
       data: result,
       hash: this.hashString(ruleKey),
@@ -139,6 +157,13 @@ export class CacheManager {
     this.astCache.clear();
     this.moduleCache.clear();
     this.ruleCache.clear();
+    // Reset hit/miss counters
+    this.astHits = 0;
+    this.astMisses = 0;
+    this.moduleHits = 0;
+    this.moduleMisses = 0;
+    this.ruleHits = 0;
+    this.ruleMisses = 0;
   }
 
   /**
@@ -148,12 +173,18 @@ export class CacheManager {
     switch (tier) {
       case 1:
         this.astCache.clear();
+        this.astHits = 0;
+        this.astMisses = 0;
         break;
       case 2:
         this.moduleCache.clear();
+        this.moduleHits = 0;
+        this.moduleMisses = 0;
         break;
       case 3:
         this.ruleCache.clear();
+        this.ruleHits = 0;
+        this.ruleMisses = 0;
         break;
     }
   }
@@ -161,19 +192,29 @@ export class CacheManager {
   /**
    * Get cache statistics
    */
-  public getStats() {
+  public getStats(): {
+    astCache: { size: number; hits: number; misses: number; hitRate: number };
+    moduleCache: { size: number; hits: number; misses: number; hitRate: number };
+    ruleCache: { size: number; hits: number; misses: number; hitRate: number };
+  } {
     return {
       astCache: {
         size: this.astCache.size,
-        hitRate: this.calculateHitRate(this.astCache),
+        hits: this.astHits,
+        misses: this.astMisses,
+        hitRate: this.calculateHitRate(this.astHits, this.astMisses),
       },
       moduleCache: {
         size: this.moduleCache.size,
-        hitRate: this.calculateHitRate(this.moduleCache),
+        hits: this.moduleHits,
+        misses: this.moduleMisses,
+        hitRate: this.calculateHitRate(this.moduleHits, this.moduleMisses),
       },
       ruleCache: {
         size: this.ruleCache.size,
-        hitRate: this.calculateHitRate(this.ruleCache),
+        hits: this.ruleHits,
+        misses: this.ruleMisses,
+        hitRate: this.calculateHitRate(this.ruleHits, this.ruleMisses),
       },
     };
   }
@@ -214,8 +255,7 @@ export class CacheManager {
     }
 
     // Sort by timestamp and remove oldest entries
-    const entries = Array.from(cache.entries())
-      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const entries = Array.from(cache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
 
     const toRemove = entries.slice(0, Math.floor(this.maxCacheSize * 0.2));
     for (const [key] of toRemove) {
@@ -224,11 +264,14 @@ export class CacheManager {
   }
 
   /**
-   * Calculate hit rate (simplified - would need hit/miss tracking in production)
+   * Calculate cache hit rate
+   * @param hits Number of cache hits
+   * @param misses Number of cache misses
+   * @returns Hit rate as a decimal between 0 and 1, or 0 if no accesses
    */
-  private calculateHitRate<T>(cache: Map<string, CacheEntry<T>>): number {
-    // This is a placeholder - in a real implementation, we'd track hits and misses
-    return cache.size > 0 ? 0.75 : 0;
+  private calculateHitRate(hits: number, misses: number): number {
+    const total = hits + misses;
+    return total > 0 ? hits / total : 0;
   }
 }
 

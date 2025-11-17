@@ -653,8 +653,20 @@ export class HtmlGraphGenerator {
    * Prepare graph data in D3-compatible format
    */
   private prepareGraphData(graph: DependencyGraph): {
-    nodes: any[];
-    links: any[];
+    nodes: Array<{
+      id: string;
+      name: string;
+      type: string;
+      module: string;
+      filePath: string;
+      hasViolation: boolean;
+      metadata?: unknown;
+    }>;
+    links: Array<{
+      source: string;
+      target: string;
+      type: string;
+    }>;
   } {
     const violationFiles = new Set(this.options.violations.map((v) => v.filePath));
     const violationNames = new Set(
