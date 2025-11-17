@@ -1,22 +1,27 @@
 {
-  "name": "arch-unit-node",
-  "version": "0.0.1",
-  "description": "A NodeJs architecture test library, to specify and assert architecture rules in plain JS",
-  "main": "index.js",
+  "name": "archunit-ts",
+  "version": "1.0.0",
+  "description": "A TypeScript/JavaScript architecture test library to specify and assert architecture rules in a fluent API",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "engines": {
-    "node": ">= 12",
+    "node": ">= 14",
     "npm": ">=6"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts test/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts test/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "prepublishOnly": "npm run build",
     "fresh-install": "rm -rf node_modules && npm cache clean --force && npm install",
     "security": "npm audit --production --audit-level high",
-    "commit": "npx git-cz",
     "outdated": "npm outdated --depth 0"
   },
-  "cacheDirectories": [
-    "node_modules"
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/manjericao/ArchUnitNode"
@@ -24,20 +29,36 @@
   "bugs": {
     "url": "https://github.com/manjericao/ArchUnitNode/issues"
   },
-  "dependencies": {
-    "debug": "^4.2.0",
-    "detective": "^5.2.0",
-    "import-all.macro": "^3.1.0"
-  },
-  "devDependencies": {
-    "ava": "~3.12.1"
-  },
   "keywords": [
     "architecture",
     "archunit",
-    "clean",
-    "cleanarchitecture"
+    "testing",
+    "typescript",
+    "javascript",
+    "clean-architecture",
+    "dependency-analysis",
+    "layered-architecture",
+    "hexagonal-architecture",
+    "architecture-testing"
   ],
   "author": "Manjericao Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/typescript-estree": "^6.0.0",
+    "glob": "^10.3.10",
+    "minimatch": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/jest": "^29.5.0",
+    "@types/minimatch": "^5.1.2",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "eslint": "^8.50.0",
+    "jest": "^29.5.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.2.0"
+  }
 }
