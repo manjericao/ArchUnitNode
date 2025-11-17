@@ -1,4 +1,4 @@
-import { TSClass as ITSClass, TSDecorator, TSMethod, TSProperty } from '../types';
+import { TSClass as ITSClass, TSDecorator, TSMethod, TSProperty, TSImport } from '../types';
 
 /**
  * Represents a TypeScript class in the codebase
@@ -14,6 +14,8 @@ export class TSClass {
   public readonly properties: TSProperty[];
   public readonly isAbstract: boolean;
   public readonly isExported: boolean;
+  private readonly imports: TSImport[];
+  private readonly dependencies: string[];
 
   constructor(classData: ITSClass) {
     this.name = classData.name;
@@ -26,6 +28,30 @@ export class TSClass {
     this.properties = classData.properties;
     this.isAbstract = classData.isAbstract;
     this.isExported = classData.isExported;
+    this.imports = classData.imports || [];
+    this.dependencies = classData.dependencies || this.extractDependencies();
+  }
+
+  /**
+   * Extract dependencies from imports, extends, and implements
+   */
+  private extractDependencies(): string[] {
+    const deps: string[] = [];
+
+    // Add imports as dependencies
+    for (const imp of this.imports) {
+      deps.push(imp.source);
+    }
+
+    // Add inheritance dependencies
+    if (this.extends) {
+      deps.push(this.extends);
+    }
+
+    // Add implementation dependencies
+    deps.push(...this.implements);
+
+    return Array.from(new Set(deps)); // Remove duplicates
   }
 
   /**
@@ -85,7 +111,30 @@ export class TSClass {
    * Get all dependencies (imports) from this class's module
    */
   public getDependencies(): string[] {
-    // This will be populated by the analyzer
-    return [];
+    return this.dependencies;
+  }
+
+  /**
+   * Get all import statements from this class's module
+   */
+  public getImports(): TSImport[] {
+    return this.imports;
+  }
+
+  /**
+   * Check if this class depends on a specific package/module
+   */
+  public dependsOn(packagePattern: string): boolean {
+    const pathPattern = packagePattern.replace(/\./g, '/');
+    return this.dependencies.some((dep) => {
+      return dep.includes(pathPattern) || dep.includes(packagePattern);
+    });
+  }
+
+  /**
+   * Check if this class depends on a class in a specific package
+   */
+  public dependsOnClassInPackage(packagePattern: string): boolean {
+    return this.dependsOn(packagePattern);
   }
 }

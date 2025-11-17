@@ -65,6 +65,8 @@ export interface TSClass {
   isAbstract: boolean;
   isExported: boolean;
   location: SourceLocation;
+  imports?: TSImport[]; // Imports in the module where this class is defined
+  dependencies?: string[]; // Resolved dependency class names
 }
 
 export interface TSInterface {
