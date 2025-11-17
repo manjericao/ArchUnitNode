@@ -6,6 +6,25 @@ import { TSClass } from '../core/TSClass';
 import { CacheManager, getGlobalCache } from '../cache/CacheManager';
 
 /**
+ * Error information for failed file parsing
+ */
+export interface ParseError {
+  file: string;
+  error: Error;
+  errorType: 'parse' | 'security' | 'io' | 'unknown';
+}
+
+/**
+ * Result of code analysis including classes and any errors encountered
+ */
+export interface AnalysisResult {
+  classes: TSClasses;
+  errors: ParseError[];
+  filesProcessed: number;
+  filesSkipped: number;
+}
+
+/**
  * Analyzes TypeScript/JavaScript codebases
  */
 export class CodeAnalyzer {
@@ -24,14 +43,60 @@ export class CodeAnalyzer {
   }
 
   /**
-   * Analyze files matching a pattern
+   * Categorize an error by type
+   */
+  private categorizeError(error: unknown): 'parse' | 'security' | 'io' | 'unknown' {
+    const errorMessage =
+      error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+    if (errorMessage.includes('path traversal') || errorMessage.includes('null byte')) {
+      return 'security';
+    } else if (
+      errorMessage.includes('parse') ||
+      errorMessage.includes('syntax') ||
+      errorMessage.includes('unexpected')
+    ) {
+      return 'parse';
+    } else if (
+      errorMessage.includes('enoent') ||
+      errorMessage.includes('eacces') ||
+      errorMessage.includes('not exist')
+    ) {
+      return 'io';
+    }
+    return 'unknown';
+  }
+
+  /**
+   * Analyze files matching a pattern (legacy method for backward compatibility)
    */
   public async analyze(
     basePath: string,
     patterns: string[] = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']
   ): Promise<TSClasses> {
+    const result = await this.analyzeWithErrors(basePath, patterns);
+
+    // Log errors to console for backward compatibility
+    if (result.errors.length > 0) {
+      console.warn(`Warning: ${result.errors.length} file(s) failed to parse`);
+      for (const err of result.errors) {
+        console.warn(`  - ${err.file}: ${err.error.message} [${err.errorType}]`);
+      }
+    }
+
+    return result.classes;
+  }
+
+  /**
+   * Analyze files matching a pattern and return detailed error information
+   */
+  public async analyzeWithErrors(
+    basePath: string,
+    patterns: string[] = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']
+  ): Promise<AnalysisResult> {
     const files = await this.findFiles(basePath, patterns);
     const classes: TSClass[] = [];
+    const errors: ParseError[] = [];
 
     // Parse files in parallel for better performance, using cache
     const parseResults = await Promise.allSettled(
@@ -61,7 +126,7 @@ export class CodeAnalyzer {
       })
     );
 
-    // Process successful parses
+    // Process results
     for (const result of parseResults) {
       if (result.status === 'fulfilled' && result.value.module) {
         const { file, module } = result.value;
@@ -80,13 +145,36 @@ export class CodeAnalyzer {
         // Analyze dependencies
         this.analyzeDependencies(module);
       } else if (result.status === 'fulfilled' && result.value.error) {
-        console.warn(`Warning: Failed to parse file ${result.value.file}:`, result.value.error);
+        // Categorize and store error
+        const err =
+          result.value.error instanceof Error
+            ? result.value.error
+            : new Error(String(result.value.error));
+
+        errors.push({
+          file: result.value.file,
+          error: err,
+          errorType: this.categorizeError(err),
+        });
       } else if (result.status === 'rejected') {
-        console.warn(`Warning: Failed to process file:`, result.reason);
+        // Promise rejection
+        const err =
+          result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+
+        errors.push({
+          file: 'unknown',
+          error: err,
+          errorType: this.categorizeError(err),
+        });
       }
     }
 
-    return new TSClasses(classes);
+    return {
+      classes: new TSClasses(classes),
+      errors,
+      filesProcessed: files.length - errors.length,
+      filesSkipped: errors.length,
+    };
   }
 
   /**

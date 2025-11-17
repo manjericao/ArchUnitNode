@@ -136,9 +136,7 @@ class DecoratorRule extends BaseArchRule {
     private decoratorName: string,
     private shouldHave: boolean
   ) {
-    super(
-      `Classes should ${shouldHave ? 'be' : 'not be'} annotated with '@${decoratorName}'`
-    );
+    super(`Classes should ${shouldHave ? 'be' : 'not be'} annotated with '@${decoratorName}'`);
   }
 
   check(): ArchitectureViolation[] {
@@ -212,7 +210,10 @@ class NamingRule extends BaseArchRule {
  * Dependency condition builder
  */
 export class ClassesDependencyShould {
-  constructor(private classes: TSClasses, private negated: boolean = false) {}
+  constructor(
+    private classes: TSClasses,
+    private negated: boolean = false
+  ) {}
 
   public resideInPackage(packagePattern: string): ArchRule {
     return new DependencyPackageRule(this.classes, packagePattern, this.negated);
@@ -237,6 +238,41 @@ class DependencyPackageRule extends BaseArchRule {
     );
   }
 
+  /**
+   * Check if a dependency path matches a package pattern using path segments
+   * This prevents false positives from substring matching
+   */
+  private matchesPackagePattern(dependency: string, pattern: string): boolean {
+    // Normalize path separators
+    const normalizedDep = dependency.replace(/\\/g, '/');
+    const normalizedPattern = pattern.replace(/\./g, '/');
+
+    // Split into segments
+    const depSegments = normalizedDep.split('/').filter((s) => s.length > 0);
+    const patternSegments = normalizedPattern.split('/').filter((s) => s.length > 0);
+
+    // Check if pattern segments appear consecutively in dependency path
+    for (let i = 0; i <= depSegments.length - patternSegments.length; i++) {
+      let match = true;
+      for (let j = 0; j < patternSegments.length; j++) {
+        // Support wildcards
+        if (patternSegments[j] === '**') {
+          continue; // ** matches any number of segments
+        } else if (patternSegments[j] === '*') {
+          continue; // * matches one segment
+        } else if (depSegments[i + j] !== patternSegments[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   check(): ArchitectureViolation[] {
     const violations: ArchitectureViolation[] = [];
 
@@ -245,10 +281,14 @@ class DependencyPackageRule extends BaseArchRule {
 
       if (this.negated) {
         // Should NOT depend on classes in this package
-        if (cls.dependsOnClassInPackage(this.packagePattern)) {
+        const forbiddenDeps = dependencies.filter((dep) =>
+          this.matchesPackagePattern(dep, this.packagePattern)
+        );
+
+        if (forbiddenDeps.length > 0) {
           violations.push(
             this.createViolation(
-              `Class '${cls.name}' should not depend on classes in package '${this.packagePattern}' but has dependencies: ${dependencies.filter(d => d.includes(this.packagePattern.replace(/\./g, '/'))).join(', ')}`,
+              `Class '${cls.name}' should not depend on classes in package '${this.packagePattern}' but has dependencies: ${forbiddenDeps.join(', ')}`,
               cls.filePath,
               this.description
             )
@@ -256,9 +296,18 @@ class DependencyPackageRule extends BaseArchRule {
         }
       } else {
         // Should ONLY depend on classes in this package
-        const invalidDeps = dependencies.filter(dep => {
-          const pathPattern = this.packagePattern.replace(/\./g, '/');
-          return !dep.includes(pathPattern) && !dep.includes(this.packagePattern) && !dep.startsWith('.');
+        const invalidDeps = dependencies.filter((dep) => {
+          // Allow relative imports (internal to the module)
+          if (dep.startsWith('.') || dep.startsWith('..')) {
+            return false;
+          }
+
+          // Allow node_modules dependencies
+          if (!dep.startsWith('/') && !dep.includes('/')) {
+            return false; // Likely a package name like 'lodash'
+          }
+
+          return !this.matchesPackagePattern(dep, this.packagePattern);
         });
 
         if (invalidDeps.length > 0) {
@@ -291,6 +340,49 @@ class DependencyMultiPackageRule extends BaseArchRule {
     );
   }
 
+  /**
+   * Check if a dependency path matches any of the package patterns using path segments
+   * This prevents false positives from substring matching
+   */
+  private matchesAnyPackagePattern(dependency: string, patterns: string[]): boolean {
+    return patterns.some((pattern) => this.matchesPackagePattern(dependency, pattern));
+  }
+
+  /**
+   * Check if a dependency path matches a package pattern using path segments
+   * This prevents false positives from substring matching
+   */
+  private matchesPackagePattern(dependency: string, pattern: string): boolean {
+    // Normalize path separators
+    const normalizedDep = dependency.replace(/\\/g, '/');
+    const normalizedPattern = pattern.replace(/\./g, '/');
+
+    // Split into segments
+    const depSegments = normalizedDep.split('/').filter((s) => s.length > 0);
+    const patternSegments = normalizedPattern.split('/').filter((s) => s.length > 0);
+
+    // Check if pattern segments appear consecutively in dependency path
+    for (let i = 0; i <= depSegments.length - patternSegments.length; i++) {
+      let match = true;
+      for (let j = 0; j < patternSegments.length; j++) {
+        // Support wildcards
+        if (patternSegments[j] === '**') {
+          continue; // ** matches any number of segments
+        } else if (patternSegments[j] === '*') {
+          continue; // * matches one segment
+        } else if (depSegments[i + j] !== patternSegments[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   check(): ArchitectureViolation[] {
     const violations: ArchitectureViolation[] = [];
 
@@ -299,12 +391,9 @@ class DependencyMultiPackageRule extends BaseArchRule {
 
       if (this.negated) {
         // Should NOT depend on classes in these packages
-        const forbiddenDeps = dependencies.filter(dep => {
-          return this.packagePatterns.some(pattern => {
-            const pathPattern = pattern.replace(/\./g, '/');
-            return dep.includes(pathPattern) || dep.includes(pattern);
-          });
-        });
+        const forbiddenDeps = dependencies.filter((dep) =>
+          this.matchesAnyPackagePattern(dep, this.packagePatterns)
+        );
 
         if (forbiddenDeps.length > 0) {
           violations.push(
@@ -317,14 +406,18 @@ class DependencyMultiPackageRule extends BaseArchRule {
         }
       } else {
         // Should ONLY depend on classes in these packages
-        const invalidDeps = dependencies.filter(dep => {
-          // Ignore relative imports (usually internal)
-          if (dep.startsWith('.')) return false;
+        const invalidDeps = dependencies.filter((dep) => {
+          // Allow relative imports (internal to the module)
+          if (dep.startsWith('.') || dep.startsWith('..')) {
+            return false;
+          }
 
-          return !this.packagePatterns.some(pattern => {
-            const pathPattern = pattern.replace(/\./g, '/');
-            return dep.includes(pathPattern) || dep.includes(pattern);
-          });
+          // Allow node_modules dependencies
+          if (!dep.startsWith('/') && !dep.includes('/')) {
+            return false; // Likely a package name like 'lodash'
+          }
+
+          return !this.matchesAnyPackagePattern(dep, this.packagePatterns);
         });
 
         if (invalidDeps.length > 0) {
@@ -351,9 +444,7 @@ class CyclicDependencyRule extends BaseArchRule {
     private classes: TSClasses,
     private shouldNotFormCycles: boolean
   ) {
-    super(
-      `Classes should ${shouldNotFormCycles ? 'not form' : 'form'} cyclic dependencies`
-    );
+    super(`Classes should ${shouldNotFormCycles ? 'not form' : 'form'} cyclic dependencies`);
   }
 
   check(): ArchitectureViolation[] {
@@ -363,7 +454,7 @@ class CyclicDependencyRule extends BaseArchRule {
     if (this.shouldNotFormCycles && cycles.length > 0) {
       // Report each cycle as a violation
       for (const cycle of cycles) {
-        const cycleDescription = cycle.map(c => c.name).join(' -> ');
+        const cycleDescription = cycle.map((c) => c.name).join(' -> ');
         violations.push(
           this.createViolation(
             `Cyclic dependency detected: ${cycleDescription}`,
@@ -408,8 +499,9 @@ class CyclicDependencyRule extends BaseArchRule {
       path.push(currentClass);
 
       // Get dependencies that are other classes in our analyzed set
-      const classDeps = currentClass.getDependencies()
-        .map(dep => {
+      const classDeps = currentClass
+        .getDependencies()
+        .map((dep) => {
           // Extract class name from dependency path
           const match = dep.match(/([^/]+)$/);
           return match ? match[1].replace(/\.(ts|js|tsx|jsx)$/, '') : null;
@@ -421,14 +513,23 @@ class CyclicDependencyRule extends BaseArchRule {
           dfs(depName, [...path]);
         } else if (recursionStack.has(depName)) {
           // Found a cycle
-          const cycleStart = path.findIndex(c => c.name === depName);
+          const cycleStart = path.findIndex((c) => c.name === depName);
           if (cycleStart !== -1) {
             const cycle = [...path.slice(cycleStart), currentClass];
             // Avoid duplicate cycles
-            const cycleKey = cycle.map(c => c.name).sort().join('->');
-            if (!cycles.some(existing =>
-              existing.map(c => c.name).sort().join('->') === cycleKey
-            )) {
+            const cycleKey = cycle
+              .map((c) => c.name)
+              .sort()
+              .join('->');
+            if (
+              !cycles.some(
+                (existing) =>
+                  existing
+                    .map((c) => c.name)
+                    .sort()
+                    .join('->') === cycleKey
+              )
+            ) {
               cycles.push(cycle);
             }
           }
