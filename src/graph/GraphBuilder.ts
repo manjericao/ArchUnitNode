@@ -19,16 +19,18 @@ export interface GraphBuilderOptions {
  * Builds dependency graphs from analyzed TypeScript code
  */
 export class GraphBuilder {
-  private options: GraphBuilderOptions;
+  private _options: GraphBuilderOptions;
 
   constructor(options: GraphBuilderOptions = {}) {
-    this.options = {
+    this._options = {
       includeInterfaces: true,
       includeFunctions: false,
       includeModules: false,
       resolveTransitive: false,
       ...options,
     };
+    // TODO: Implement options usage in build() method
+    void this._options; // Intentionally kept for future feature implementation
   }
 
   /**

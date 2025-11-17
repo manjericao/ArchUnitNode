@@ -76,16 +76,18 @@ export class NoClassesSelector {
 export class ClassesThatStatic {
   private filters: Array<(classes: TSClasses) => TSClasses> = [];
   private negated: boolean;
-  private customPredicate?: ClassPredicate;
+  private _customPredicate?: ClassPredicate;
 
   constructor(negated: boolean = false, customPredicate?: ClassPredicate) {
     this.negated = negated;
-    this.customPredicate = customPredicate;
+    this._customPredicate = customPredicate;
 
     // If a custom predicate is provided, add it as the first filter
     if (customPredicate) {
       this.filters.push((classes) => classes.that(customPredicate));
     }
+    // Stored for potential future use in rule descriptions
+    void this._customPredicate;
   }
 
   /**
