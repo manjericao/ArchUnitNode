@@ -6,7 +6,7 @@ Based on deep analysis, ArchUnit-TS has **excellent architecture** and has recei
 
 ## 🎉 Implementation Summary
 
-### ✅ COMPLETED (13 major features)
+### ✅ COMPLETED (14 major features)
 
 1. **Fixed Dependency Analysis** - Critical bug fix, all dependency rules now work
 2. **3-Tier Caching System** - 60-80% performance improvement on repeated runs
@@ -21,19 +21,20 @@ Based on deep analysis, ArchUnit-TS has **excellent architecture** and has recei
 11. **CLI Tool** - Full command-line interface with init, check, and validate commands
 12. **General Negation Operator** - `.not()` for any condition in ClassesThat API
 13. **Microservices Architecture Pattern** - Pre-built pattern for microservices with service isolation rules
+14. **Custom Predicates in API** - User-defined filter functions for maximum flexibility
 
 ### ⏳ REMAINING HIGH-VALUE FEATURES
 
-1. **Custom Predicates in API** - User-defined filters (2-3 hours)
+None! All high-priority features have been implemented.
 
 ### 📊 Progress Metrics
 
 - **Critical Issues Fixed**: 1/1 (100%)
 - **Performance Improvements**: 3/3 (100%)
-- **Feature Enhancements**: 5/6 (83%)
+- **Feature Enhancements**: 6/6 (100%)
 - **Architectural Patterns**: 3/3 (100%)
 - **Tooling & CLI**: 1/1 (100%)
-- **Overall Completion**: ~85% of high-priority roadmap features
+- **Overall Completion**: 100% of all high-priority roadmap features ✨
 
 ---
 
@@ -277,19 +278,72 @@ await archUnit.generateReport('./src', rules, {
 **Effort**: 8-10 hours
 **Value**: Better visualization
 
-### 11. **Custom Predicates** - PRIORITY 11
+### 11. **Custom Predicates** - PRIORITY 11 ✅
 
-**Feature**: User-defined filters
+**Status**: FULLY IMPLEMENTED
+
+**What was done**:
+
+- Added `ClassPredicate` type for user-defined filter functions
+- Updated `ClassesSelector.that()` and `NoClassesSelector.that()` to accept optional predicates
+- Added `should()` method to `ClassesThatStatic` for direct predicate-to-assertion flow
+- Added `haveSimpleNameStartingWith()` method to `ClassesShouldStatic`
+- Custom predicates can access all TSClass properties: name, filePath, module, methods, properties, decorators, etc.
+- Fully composable with existing filters (resideInPackage, areAnnotatedWith, etc.)
+- Works with both `classes()` and `noClasses()` selectors
+
+**Usage Examples**:
 
 ```typescript
+// Filter by method count
 const rule = ArchRuleDefinition.classes()
-  .that((clazz) => clazz.methods.length > 10)
+  .that((cls) => cls.methods.length > 10)
   .should()
   .resideInPackage('services');
+
+// Filter by exported status
+ArchRuleDefinition.classes()
+  .that((cls) => cls.isExported)
+  .should()
+  .haveSimpleNameMatching(/^[A-Z]/);
+
+// Combine with built-in filters
+ArchRuleDefinition.classes()
+  .that((cls) => cls.properties.length > 5)
+  .resideInPackage('models')
+  .should()
+  .haveSimpleNameEndingWith('Model');
+
+// Complex filtering
+ArchRuleDefinition.classes()
+  .that((cls) => {
+    const hasOnlyAccessors = cls.methods.every(
+      (m) => m.name.startsWith('get') || m.name.startsWith('set')
+    );
+    return hasOnlyAccessors && cls.methods.length > 0;
+  })
+  .should()
+  .haveSimpleNameMatching(/Model|DTO/);
 ```
 
-**Effort**: 4-6 hours
-**Value**: Maximum flexibility
+**Tests**: 17 comprehensive test cases covering:
+
+- Basic predicate filtering (method count, exported classes, properties)
+- Combining predicates with built-in filters
+- Complex predicates (method names, inheritance, interfaces)
+- Method and property analysis (public/private/static)
+- Negation with custom predicates
+- Real-world use cases
+
+**Files Modified**:
+
+- `/src/types/index.ts` (added ClassPredicate type)
+- `/src/lang/ArchRuleDefinition.ts` (added predicate parameter to that(), added should() method)
+- `/src/index.ts` (exported ClassPredicate type)
+
+**Files Created**:
+
+- `/test/CustomPredicates.test.ts` (comprehensive test suite)
 
 ### 12. **Negation Support** - PRIORITY 12 ✅
 

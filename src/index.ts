@@ -17,6 +17,7 @@ import { ArchitectureViolation } from './types';
 
 // Types
 export * from './types';
+export type { ClassPredicate } from './types';
 
 // Parser and Analyzer
 export { TypeScriptParser } from './parser/TypeScriptParser';

@@ -1,5 +1,6 @@
 import { TSClasses } from '../core/TSClasses';
 import { ClassesShould } from './syntax/ClassesShould';
+import { ClassPredicate } from '../types';
 
 /**
  * Entry point for defining architecture rules using fluent API
@@ -33,9 +34,19 @@ export class ArchRuleDefinition {
 export class ClassesSelector {
   /**
    * Filter classes with "that" conditions
+   * @param predicate Optional custom predicate function for filtering classes
+   * @example
+   * // Using built-in filters
+   * classes().that().resideInPackage('services')
+   *
+   * // Using custom predicate
+   * classes().that((cls) => cls.methods.length > 10)
+   *
+   * // Combining custom predicate with built-in filters
+   * classes().that((cls) => cls.isExported).resideInPackage('api')
    */
-  public that(): ClassesThatStatic {
-    return new ClassesThatStatic();
+  public that(predicate?: ClassPredicate): ClassesThatStatic {
+    return new ClassesThatStatic(false, predicate);
   }
 
   /**
@@ -52,9 +63,10 @@ export class ClassesSelector {
 export class NoClassesSelector {
   /**
    * Filter classes with "that" conditions
+   * @param predicate Optional custom predicate function for filtering classes
    */
-  public that(): ClassesThatStatic {
-    return new ClassesThatStatic(true);
+  public that(predicate?: ClassPredicate): ClassesThatStatic {
+    return new ClassesThatStatic(true, predicate);
   }
 }
 
@@ -64,9 +76,16 @@ export class NoClassesSelector {
 export class ClassesThatStatic {
   private filters: Array<(classes: TSClasses) => TSClasses> = [];
   private negated: boolean;
+  private customPredicate?: ClassPredicate;
 
-  constructor(negated: boolean = false) {
+  constructor(negated: boolean = false, customPredicate?: ClassPredicate) {
     this.negated = negated;
+    this.customPredicate = customPredicate;
+
+    // If a custom predicate is provided, add it as the first filter
+    if (customPredicate) {
+      this.filters.push((classes) => classes.that(customPredicate));
+    }
   }
 
   /**
@@ -128,6 +147,14 @@ export class ClassesThatStatic {
    */
   public areAssignableTo(className: string): ClassesShouldStatic {
     this.filters.push((classes) => classes.areAssignableTo(className));
+    return new ClassesShouldStatic(this.filters, this.negated);
+  }
+
+  /**
+   * Move to "should" phase for defining assertions
+   * Allows using custom predicates directly with should()
+   */
+  public should(): ClassesShouldStatic {
     return new ClassesShouldStatic(this.filters, this.negated);
   }
 }
@@ -210,6 +237,16 @@ export class ClassesShouldStatic {
       const filtered = this.applyFilters(classes);
       return new ClassesShould(filtered).haveSimpleNameEndingWith(suffix);
     }, `Classes should have simple name ending with '${suffix}'`);
+  }
+
+  /**
+   * Classes should have names starting with a prefix
+   */
+  public haveSimpleNameStartingWith(prefix: string): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveSimpleNameStartingWith(prefix);
+    }, `Classes should have simple name starting with '${prefix}'`);
   }
 
   /**
