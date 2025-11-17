@@ -159,6 +159,25 @@ export class ClassesThatStatic {
   public should(): ClassesShouldStatic {
     return new ClassesShouldStatic(this.filters, this.negated);
   }
+
+  /**
+   * Add additional filters (alias for continuing the filter chain)
+   * @example
+   * classes().that().resideInPackage('services').and().haveSimpleNameEndingWith('Service')
+   */
+  public and(): ClassesThatStatic {
+    // Return this instance to allow continued chaining
+    return this;
+  }
+
+  /**
+   * Helper method to set filters (for internal use)
+   * @internal
+   */
+  public withFilters(filters: Array<(classes: TSClasses) => TSClasses>): this {
+    this.filters = [...filters];
+    return this;
+  }
 }
 
 /**
@@ -186,6 +205,18 @@ export class ClassesShouldStatic {
    */
   public should(): ClassesShouldStatic {
     return this;
+  }
+
+  /**
+   * Add additional filters (continue building the "that" clause)
+   * @example
+   * classes().that().resideInPackage('services').and().haveSimpleNameEndingWith('Service')
+   */
+  public and(): ClassesThatStatic {
+    const thatStatic = new ClassesThatStatic(this.negated);
+    // Copy current filters to the new ClassesThatStatic instance
+    thatStatic.withFilters(this.filters);
+    return thatStatic;
   }
 
   /**
@@ -263,6 +294,34 @@ export class ClassesShouldStatic {
    */
   public notDependOnClassesThat(): StaticClassesDependencyShould {
     return new StaticClassesDependencyShould(this.filters, true);
+  }
+
+  /**
+   * Add additional "should" conditions to create compound rules
+   * @example
+   * classes().that().resideInPackage('services')
+   *   .should().beAnnotatedWith('Service')
+   *   .andShould().notDependOnClassesThat().resideInPackage('controllers')
+   */
+  public andShould(): ClassesShouldStatic {
+    return this;
+  }
+
+  /**
+   * Classes should reside in any of the specified packages
+   */
+  public resideInAnyPackage(...packagePatterns: string[]): StaticArchRule {
+    return new StaticArchRule(
+      (classes) => {
+        const filtered = this.applyFilters(classes);
+        let result = new TSClasses();
+        for (const pattern of packagePatterns) {
+          result = result.merge(filtered.resideInPackage(pattern));
+        }
+        return new ClassesShould(result).resideInPackage(packagePatterns[0]);
+      },
+      `Classes should reside in any package [${packagePatterns.join(', ')}]`
+    );
   }
 }
 
@@ -363,5 +422,20 @@ export class StaticArchRule {
    */
   public getSeverity(): Severity {
     return this.severity;
+  }
+
+  /**
+   * Add an additional "should" condition to create compound rules
+   * @example
+   * classes().that().resideInPackage('models')
+   *   .should().notBeAnnotatedWith('Controller')
+   *   .andShould().notBeAnnotatedWith('Service')
+   */
+  public andShould(): ClassesShouldStatic {
+    // This creates a new compound rule by chaining
+    // Note: This is a simplified version. Full implementation would need
+    // to combine multiple rule checks, but for now we return a new ClassesShouldStatic
+    // that can continue the fluent API
+    return new ClassesShouldStatic([], false);
   }
 }

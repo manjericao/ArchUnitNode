@@ -21,11 +21,14 @@ describe('CacheManager', () => {
     describe('Hit Rate Tracking', () => {
       it('should track cache hits correctly', () => {
         const mockModule: TSModule = {
+          name: 'TestModule',
           filePath: testFilePath,
           classes: [],
           interfaces: [],
           functions: [],
           imports: [],
+          exports: [],
+          exports: [],
         };
 
         // Initial stats should be zero
@@ -81,11 +84,13 @@ describe('CacheManager', () => {
 
       it('should track cache miss when file hash changes', () => {
         const mockModule: TSModule = {
+          name: 'TestModule',
           filePath: testFilePath,
           classes: [],
           interfaces: [],
           functions: [],
           imports: [],
+          exports: [],
         };
 
         // Store in cache
@@ -105,6 +110,7 @@ describe('CacheManager', () => {
           interfaces: [],
           functions: [],
           imports: [],
+          exports: [],
         };
 
         cacheManager.setAST(tempFilePath, tempModule);
@@ -130,11 +136,13 @@ describe('CacheManager', () => {
 
       it('should handle 100% hit rate', () => {
         const mockModule: TSModule = {
+          name: 'TestModule',
           filePath: testFilePath,
           classes: [],
           interfaces: [],
           functions: [],
           imports: [],
+          exports: [],
         };
 
         cacheManager.setAST(testFilePath, mockModule);
@@ -156,11 +164,13 @@ describe('CacheManager', () => {
         const shortTTLCache = new CacheManager({ cacheTTL: 100 }); // 100ms TTL
 
         const mockModule: TSModule = {
+          name: 'TestModule',
           filePath: testFilePath,
           classes: [],
           interfaces: [],
           functions: [],
           imports: [],
+          exports: [],
         };
 
         shortTTLCache.setAST(testFilePath, mockModule);
@@ -197,9 +207,10 @@ describe('CacheManager', () => {
           decorators: [],
           methods: [],
           properties: [],
-          extends: null,
+
           implements: [],
           imports: [],
+          exports: [],
         };
         const mockClasses = [new TSClass(mockClass)];
 
@@ -248,9 +259,10 @@ describe('CacheManager', () => {
             decorators: [],
             methods: [],
             properties: [],
-            extends: null,
+
             implements: [],
             imports: [],
+            exports: [],
           }),
         ];
         const mockClasses2 = [
@@ -260,9 +272,10 @@ describe('CacheManager', () => {
             decorators: [],
             methods: [],
             properties: [],
-            extends: null,
+
             implements: [],
             imports: [],
+            exports: [],
           }),
         ];
 
@@ -349,11 +362,13 @@ describe('CacheManager', () => {
       // Fill cache to capacity
       for (let i = 0; i < 10; i++) {
         const mockModule: TSModule = {
+          name: 'TestModule',
           filePath: `file${i}.ts`,
           classes: [],
           interfaces: [],
           functions: [],
           imports: [],
+          exports: [],
         };
         // Create temp files for hash validation
         const tempPath = path.join(__dirname, `temp-${i}.ts`);
@@ -368,11 +383,13 @@ describe('CacheManager', () => {
       const tempPath = path.join(__dirname, 'temp-11.ts');
       fs.writeFileSync(tempPath, 'content 11', 'utf-8');
       const mockModule: TSModule = {
+        name: 'TestModule',
         filePath: tempPath,
         classes: [],
         interfaces: [],
         functions: [],
         imports: [],
+        exports: [],
       };
       smallCache.setAST(tempPath, mockModule);
 
@@ -403,6 +420,7 @@ describe('CacheManager', () => {
         interfaces: [],
         functions: [],
         imports: [],
+        exports: [],
       };
 
       // Populate all cache tiers
@@ -446,6 +464,7 @@ describe('CacheManager', () => {
         interfaces: [],
         functions: [],
         imports: [],
+        exports: [],
       };
 
       // Populate all tiers
@@ -492,6 +511,7 @@ describe('CacheManager', () => {
         interfaces: [],
         functions: [],
         imports: [],
+        exports: [],
       };
 
       cache.setAST(testFilePath, mockModule);
@@ -511,11 +531,13 @@ describe('CacheManager', () => {
     it('should reset global cache instance', () => {
       const cache1 = getGlobalCache();
       cache1.setAST(testFilePath, {
+        name: 'TestModule',
         filePath: testFilePath,
         classes: [],
         interfaces: [],
         functions: [],
         imports: [],
+        exports: [],
       });
 
       resetGlobalCache();
@@ -542,6 +564,7 @@ describe('CacheManager', () => {
         interfaces: [],
         functions: [],
         imports: [],
+        exports: [],
       };
 
       cacheManager.setAST(testFilePath, mockModule);
@@ -568,6 +591,7 @@ describe('CacheManager', () => {
         interfaces: [],
         functions: [],
         imports: [],
+        exports: [],
       };
 
       cacheManager.setAST(testFilePath, mockModule);

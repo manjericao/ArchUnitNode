@@ -33,7 +33,15 @@ export { CodeAnalyzer } from './analyzer/CodeAnalyzer';
 export type { ParseError, AnalysisResult } from './analyzer/CodeAnalyzer';
 
 // Fluent API
-export { ArchRuleDefinition, StaticArchRule } from './lang/ArchRuleDefinition';
+export {
+  ArchRuleDefinition,
+  StaticArchRule,
+  ClassesSelector,
+  NoClassesSelector,
+  ClassesThatStatic,
+  ClassesShouldStatic,
+  StaticClassesDependencyShould,
+} from './lang/ArchRuleDefinition';
 export { ClassesThat } from './lang/syntax/ClassesThat';
 export { ClassesShould } from './lang/syntax/ClassesShould';
 
@@ -50,7 +58,14 @@ export {
 export { LayeredArchitecture, layeredArchitecture } from './library/LayeredArchitecture';
 
 // Cache
-export { CacheManager, getGlobalCache, resetGlobalCache } from './cache/CacheManager';
+export {
+  CacheManager,
+  getGlobalCache,
+  resetGlobalCache,
+  type CacheOptions,
+  type CacheStats,
+  type CacheTierStats,
+} from './cache/CacheManager';
 
 // Configuration
 export {
@@ -83,6 +98,14 @@ export {
   HtmlGraphGenerator,
   HtmlGraphOptions,
 } from './graph';
+
+// Framework Detection
+export {
+  FrameworkDetector,
+  type DetectedFramework,
+  type RuleSuggestion,
+  type FrameworkDetectionResult,
+} from './framework';
 
 // Convenience exports for common patterns
 export const { classes, noClasses, allClasses } = ArchRuleDefinition;

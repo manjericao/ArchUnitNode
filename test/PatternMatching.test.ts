@@ -1,7 +1,6 @@
 import { ArchRuleDefinition } from '../src/lang/ArchRuleDefinition';
 import { CodeAnalyzer } from '../src/analyzer/CodeAnalyzer';
 import { TSClasses } from '../src/core/TSClasses';
-import { TSClass } from '../src/core/TSClass';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -249,7 +248,7 @@ describe('Pattern Matching', () => {
         const classA = result.getAll().find((c) => c.name === 'ClassA');
         expect(classA).toBeDefined();
 
-        const deps = classA!.dependencies();
+        const deps = classA!.getDependencies();
         expect(deps.length).toBeGreaterThan(0);
 
         // Cleanup
@@ -285,7 +284,7 @@ describe('Pattern Matching', () => {
         expect(service).toBeDefined();
 
         // Should handle node_modules imports
-        expect(service!.imports).toBeDefined();
+        expect(service!.getImports()).toBeDefined();
 
         // Cleanup
         fs.unlinkSync(path.join(tempDir, 'Service.ts'));
@@ -347,7 +346,7 @@ describe('Pattern Matching', () => {
         .that()
         .haveSimpleNameMatching(/^[A-Z][a-z]+[A-Z][a-z]+(Controller|Service|Repository)$/)
         .should()
-        .beAnnotatedWith(/Controller|Service|Repository/);
+        .beAnnotatedWith('Service');
 
       const violations = rule.check(testClasses);
       // Classes with specific naming conventions should have matching decorators
@@ -559,9 +558,10 @@ describe('Pattern Matching', () => {
     });
 
     it('should handle custom predicate patterns', () => {
-      const rule = ArchRuleDefinition.classes((cls: TSClass) => {
-        return cls.methods.length > 2 && cls.name.includes('Service');
-      })
+      const rule = ArchRuleDefinition.classes()
+        .that((cls) => {
+          return cls.methods.length > 2 && cls.name.includes('Service');
+        })
         .should()
         .beAnnotatedWith('Service');
 
