@@ -30,20 +30,40 @@ export class CodeAnalyzer {
     const files = await this.findFiles(basePath, patterns);
     const classes: TSClass[] = [];
 
-    for (const file of files) {
-      try {
-        const module = this.parser.parseFile(file);
+    // Parse files in parallel for better performance
+    const parseResults = await Promise.allSettled(
+      files.map(async (file) => {
+        try {
+          const module = this.parser.parseFile(file);
+          return { file, module, error: null };
+        } catch (error) {
+          return { file, module: null, error };
+        }
+      })
+    );
+
+    // Process successful parses
+    for (const result of parseResults) {
+      if (result.status === 'fulfilled' && result.value.module) {
+        const { file, module } = result.value;
         this.modules.set(file, module);
 
         // Convert parsed classes to TSClass instances
+        // Pass module imports to each class for dependency tracking
         for (const classData of module.classes) {
-          classes.push(new TSClass(classData));
+          const classWithImports = {
+            ...classData,
+            imports: module.imports,
+          };
+          classes.push(new TSClass(classWithImports));
         }
 
         // Analyze dependencies
         this.analyzeDependencies(module);
-      } catch (error) {
-        console.warn(`Warning: Failed to parse file ${file}:`, error);
+      } else if (result.status === 'fulfilled' && result.value.error) {
+        console.warn(`Warning: Failed to parse file ${result.value.file}:`, result.value.error);
+      } else if (result.status === 'rejected') {
+        console.warn(`Warning: Failed to process file:`, result.reason);
       }
     }
 
@@ -51,18 +71,24 @@ export class CodeAnalyzer {
   }
 
   /**
-   * Find files matching patterns
+   * Find files matching patterns (parallel glob execution)
    */
   private async findFiles(basePath: string, patterns: string[]): Promise<string[]> {
     const allFiles: Set<string> = new Set();
 
-    for (const pattern of patterns) {
-      const files = await glob(pattern, {
-        cwd: basePath,
-        absolute: true,
-        ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/*.d.ts'],
-      });
+    // Execute all glob patterns in parallel
+    const globResults = await Promise.all(
+      patterns.map((pattern) =>
+        glob(pattern, {
+          cwd: basePath,
+          absolute: true,
+          ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/*.d.ts'],
+        })
+      )
+    );
 
+    // Merge all results
+    for (const files of globResults) {
       files.forEach((file) => allFiles.add(file));
     }
 
