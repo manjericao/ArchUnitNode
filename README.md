@@ -1,11 +1,44 @@
 # ArchUnit-TS
 
-![GitHub issues](https://img.shields.io/github/issues/manjericao/ArchUnitNode?style=for-the-badge)
-![GitHub](https://img.shields.io/github/license/manjericao/ArchUnitNode?style=for-the-badge)
-![npm](https://img.shields.io/npm/v/arch-unit-node?style=for-the-badge)
-![GitHub top language](https://img.shields.io/github/languages/top/manjericao/ArchUnitNode?style=for-the-badge)
+<div align="center">
 
-A TypeScript/JavaScript architecture testing library that allows you to specify and assert architecture rules in a fluent, expressive API. Inspired by [ArchUnit](https://www.archunit.org/) for Java.
+[![npm version](https://img.shields.io/npm/v/archunit-ts?style=for-the-badge)](https://www.npmjs.com/package/archunit-ts)
+[![npm downloads](https://img.shields.io/npm/dm/archunit-ts?style=for-the-badge)](https://www.npmjs.com/package/archunit-ts)
+[![License](https://img.shields.io/github/license/manjericao/ArchUnitNode?style=for-the-badge)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/manjericao/ArchUnitNode/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/manjericao/ArchUnitNode/actions)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2+-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-14+-green?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+[![Code Coverage](https://img.shields.io/codecov/c/github/manjericao/ArchUnitNode?style=for-the-badge)](https://codecov.io/gh/manjericao/ArchUnitNode)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/manjericao/ArchUnitNode/codeql.yml?branch=main&style=for-the-badge&label=CodeQL)](https://github.com/manjericao/ArchUnitNode/security/code-scanning)
+
+[![GitHub issues](https://img.shields.io/github/issues/manjericao/ArchUnitNode?style=for-the-badge)](https://github.com/manjericao/ArchUnitNode/issues)
+[![GitHub stars](https://img.shields.io/github/stars/manjericao/ArchUnitNode?style=for-the-badge)](https://github.com/manjericao/ArchUnitNode/stargazers)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](CONTRIBUTING.md)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg?style=for-the-badge)](https://conventionalcommits.org)
+
+</div>
+
+---
+
+<p align="center">
+  <strong>A TypeScript/JavaScript architecture testing library that allows you to specify and assert architecture rules in a fluent, expressive API.</strong>
+</p>
+
+<p align="center">
+  Inspired by <a href="https://www.archunit.org/">ArchUnit</a> for Java
+</p>
+
+<p align="center">
+  <a href="#installation">Installation</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="API.md">API Docs</a> •
+  <a href="#examples">Examples</a> •
+  <a href="CONTRIBUTING.md">Contributing</a> •
+  <a href="FAQ.md">FAQ</a>
+</p>
+
+---
 
 ## Overview
 
@@ -322,6 +355,64 @@ Check the `/examples` directory for complete working examples:
 - `examples/express-api/` - Express.js REST API
 - `examples/nestjs-app/` - NestJS application
 - `examples/clean-architecture/` - Clean architecture example
+
+## Why ArchUnit-TS?
+
+### Prevent Architecture Drift
+
+As codebases grow, they tend to drift from their intended architecture. ArchUnit-TS helps prevent this by making architecture testable:
+
+```typescript
+// ❌ This would fail if a developer accidentally adds a dependency
+const rule = ArchRuleDefinition.classes()
+  .that()
+  .resideInPackage('domain')
+  .should()
+  .notDependOnClassesThat()
+  .resideInPackage('infrastructure');
+```
+
+### Living Documentation
+
+Architecture tests serve as executable documentation that never gets outdated:
+
+```typescript
+// This test documents that controllers should only use services
+describe('Architecture Rules', () => {
+  it('controllers should only depend on services', async () => {
+    // Test doubles as documentation
+  });
+});
+```
+
+### Early Detection
+
+Catch architectural violations in CI/CD before they reach code review:
+
+```bash
+✓ Architecture Tests
+  ✓ services should reside in services package
+  ✓ controllers should only depend on services
+  ✗ domain should not depend on infrastructure
+
+    Violation: UserEntity depends on PostgresClient
+    Location: src/domain/entities/UserEntity.ts:5
+```
+
+## Documentation
+
+- 📖 [API Documentation](API.md) - Complete API reference
+- ❓ [FAQ](FAQ.md) - Frequently asked questions
+- 🛣️ [Roadmap](ROADMAP.md) - Future plans and features
+- 🔒 [Security Policy](SECURITY.md) - Security guidelines
+- 📝 [Changelog](CHANGELOG.md) - Release history
+- 🤝 [Contributing Guide](CONTRIBUTING.md) - How to contribute
+
+## Community & Support
+
+- 💬 [GitHub Discussions](https://github.com/manjericao/ArchUnitNode/discussions) - Ask questions and share ideas
+- 🐛 [Issue Tracker](https://github.com/manjericao/ArchUnitNode/issues) - Report bugs
+- 📧 Email: admin@manjericao.io
 
 ## Contributing
 
