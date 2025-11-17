@@ -20,9 +20,35 @@ import {
  */
 export class TypeScriptParser {
   /**
-   * Validate that a file path is safe to read (prevents path traversal attacks)
-   * @param filePath The file path to validate
-   * @throws Error if path contains suspicious patterns
+   * Validates a file path for security concerns before parsing.
+   * Implements defense-in-depth security validation to prevent:
+   * - Path traversal attacks (../)
+   * - Null byte injection
+   * - Directory traversal outside project scope
+   *
+   * @param filePath Path to validate
+   * @throws {Error} If path contains traversal attempts, null bytes, or doesn't exist
+   *
+   * @remarks
+   * Security checks performed:
+   * 1. Path normalization and resolution
+   * 2. Detection of ".." in normalized paths
+   * 3. Validation that relative paths don't escape CWD
+   * 4. Null byte detection (including \x00 and \0)
+   * 5. File existence verification
+   * 6. File type verification (not a directory)
+   *
+   * @example
+   * ```typescript
+   * // These will throw:
+   * validateFilePath('../../../etc/passwd');           // Path traversal
+   * validateFilePath('/valid/path/file.ts\x00.txt');  // Null byte
+   * validateFilePath('/path/to/directory');            // Directory, not file
+   *
+   * // These will pass:
+   * validateFilePath('/absolute/path/to/file.ts');
+   * validateFilePath('./relative/path/to/file.ts');
+   * ```
    */
   private validateFilePath(filePath: string): void {
     const normalized = path.normalize(filePath);
@@ -62,7 +88,57 @@ export class TypeScriptParser {
   }
 
   /**
-   * Parse a single file
+   * Parses a single TypeScript file and extracts its structure.
+   * Performs security validation before parsing to prevent path traversal and other attacks.
+   *
+   * @param filePath Path to the TypeScript file to parse (absolute or relative)
+   * @returns Module containing classes, interfaces, functions, and imports
+   * @throws {Error} If file path is invalid, contains security violations, or has syntax errors
+   *
+   * @remarks
+   * The parser extracts:
+   * - Classes with their methods, properties, decorators, extends, and implements
+   * - Interfaces with their properties and extends
+   * - Functions with their parameters
+   * - Import statements with source modules
+   *
+   * Security features:
+   * - Path traversal protection (rejects ../)
+   * - Null byte injection prevention
+   * - File type validation
+   *
+   * @example
+   * ```typescript
+   * const parser = new TypeScriptParser();
+   *
+   * // Parse a file
+   * const module = parser.parseFile('./src/services/UserService.ts');
+   *
+   * // Access extracted information
+   * console.log(`Found ${module.classes.length} classes`);
+   * console.log(`Imports: ${module.imports.map(i => i.source).join(', ')}`);
+   *
+   * // Iterate through classes
+   * for (const cls of module.classes) {
+   *   console.log(`Class ${cls.name}:`);
+   *   console.log(`  Methods: ${cls.methods.map(m => m.name).join(', ')}`);
+   *   console.log(`  Decorators: ${cls.decorators.map(d => d.name).join(', ')}`);
+   * }
+   * ```
+   *
+   * @example
+   * // Error handling
+   * ```typescript
+   * try {
+   *   const module = parser.parseFile('./src/file.ts');
+   * } catch (error) {
+   *   if (error.message.includes('path traversal')) {
+   *     console.error('Security violation detected');
+   *   } else if (error.message.includes('Unexpected token')) {
+   *     console.error('Syntax error in file');
+   *   }
+   * }
+   * ```
    */
   public parseFile(filePath: string): TSModule {
     // Validate file path for security

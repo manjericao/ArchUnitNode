@@ -63,3 +63,4 @@ docs/
 
 # Husky
 .husky/_/
+test/temp-*/

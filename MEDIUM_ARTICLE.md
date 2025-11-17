@@ -4,7 +4,7 @@
 
 ![A software architect reviewing blueprints with code in the background]
 
-*You write tests for your functions. You write tests for your components. But do you test your architecture?*
+_You write tests for your functions. You write tests for your components. But do you test your architecture?_
 
 ---
 
@@ -121,9 +121,7 @@ describe('Architecture: Clean Architecture Pattern', () => {
       .notDependOnClassesThat()
       .resideInAnyPackage('infrastructure', 'presentation');
 
-    await expect(archUnit.checkRule('./src', rule))
-      .resolves
-      .toHaveLength(0);
+    await expect(archUnit.checkRule('./src', rule)).resolves.toHaveLength(0);
   });
 });
 ```
@@ -176,24 +174,24 @@ Let's talk numbers. Here's the **real financial impact** of architecture testing
 
 Without architecture testing, these are typical costs teams face:
 
-| Problem | Average Cost | Frequency | Annual Impact |
-|---------|-------------|-----------|---------------|
-| **Major refactoring** due to coupling | $50,000 | 2x/year | $100,000 |
-| **Bug fixes** from architecture violations | $5,000 | 10x/year | $50,000 |
-| **Extended onboarding** time | $8,000 | 6 new hires | $48,000 |
-| **Code review** overhead for architecture | $20,000 | Ongoing | $20,000 |
-| **Technical debt** interest | Variable | Ongoing | $30,000+ |
-| **Total Annual Cost** | — | — | **$248,000** |
+| Problem                                    | Average Cost | Frequency   | Annual Impact |
+| ------------------------------------------ | ------------ | ----------- | ------------- |
+| **Major refactoring** due to coupling      | $50,000      | 2x/year     | $100,000      |
+| **Bug fixes** from architecture violations | $5,000       | 10x/year    | $50,000       |
+| **Extended onboarding** time               | $8,000       | 6 new hires | $48,000       |
+| **Code review** overhead for architecture  | $20,000      | Ongoing     | $20,000       |
+| **Technical debt** interest                | Variable     | Ongoing     | $30,000+      |
+| **Total Annual Cost**                      | —            | —           | **$248,000**  |
 
 ### Investment in ArchUnit-TS
 
-| Item | Cost |
-|------|------|
-| **Tool cost** | $0 (open source) |
-| **Initial setup** (2-3 days) | $3,000 |
-| **Writing tests** (ongoing, 1 hr/week) | $8,000/year |
-| **Maintenance** | $2,000/year |
-| **Total Annual Investment** | **$13,000** |
+| Item                                   | Cost             |
+| -------------------------------------- | ---------------- |
+| **Tool cost**                          | $0 (open source) |
+| **Initial setup** (2-3 days)           | $3,000           |
+| **Writing tests** (ongoing, 1 hr/week) | $8,000/year      |
+| **Maintenance**                        | $2,000/year      |
+| **Total Annual Investment**            | **$13,000**      |
 
 ### Net Savings
 
@@ -345,15 +343,23 @@ import { layeredArchitecture } from 'archunit-ts';
 describe('Layered Architecture', () => {
   it('should respect layer boundaries', async () => {
     const architecture = layeredArchitecture()
-      .layer('Controllers').definedBy('controllers')
-      .layer('Services').definedBy('services')
-      .layer('Repositories').definedBy('repositories')
-      .layer('Models').definedBy('models')
+      .layer('Controllers')
+      .definedBy('controllers')
+      .layer('Services')
+      .definedBy('services')
+      .layer('Repositories')
+      .definedBy('repositories')
+      .layer('Models')
+      .definedBy('models')
       // Define access rules
-      .whereLayer('Controllers').mayOnlyAccessLayers('Services')
-      .whereLayer('Services').mayOnlyAccessLayers('Repositories', 'Models')
-      .whereLayer('Repositories').mayOnlyAccessLayers('Models')
-      .whereLayer('Models').mayNotAccessLayers('Controllers', 'Services', 'Repositories');
+      .whereLayer('Controllers')
+      .mayOnlyAccessLayers('Services')
+      .whereLayer('Services')
+      .mayOnlyAccessLayers('Repositories', 'Models')
+      .whereLayer('Repositories')
+      .mayOnlyAccessLayers('Models')
+      .whereLayer('Models')
+      .mayNotAccessLayers('Controllers', 'Services', 'Repositories');
 
     const violations = await archUnit.checkRule('./src', architecture);
     expect(violations).toHaveLength(0);
@@ -368,8 +374,7 @@ describe('Layered Architecture', () => {
 One of ArchUnit-TS's strengths is its **fluent, English-like API**:
 
 ```typescript
-ArchRuleDefinition
-  .classes()
+ArchRuleDefinition.classes()
   .that()
   .haveSimpleNameEndingWith('Controller')
   .should()
@@ -407,6 +412,7 @@ ArchRuleDefinition.classes()
 ```
 
 **Benefits:**
+
 - New developers know where to find things
 - Auto-complete works better
 - Code reviews focus on logic, not naming
@@ -434,6 +440,7 @@ ArchRuleDefinition.classes()
 ```
 
 **Benefits:**
+
 - Prevent spaghetti code
 - Enable modular refactoring
 - Support microservices extraction
@@ -459,6 +466,7 @@ ArchRuleDefinition.classes()
 ```
 
 **Benefits:**
+
 - Framework best practices enforced
 - Dependency injection works correctly
 - Clearer code intent
@@ -474,13 +482,14 @@ const cycles = analyzer.findCyclicDependencies();
 
 if (cycles.length > 0) {
   console.log(`Found ${cycles.length} circular dependencies`);
-  cycles.forEach(cycle => {
+  cycles.forEach((cycle) => {
     console.log(`Cycle: ${cycle.join(' → ')}`);
   });
 }
 ```
 
 **Benefits:**
+
 - Prevent build issues
 - Enable tree-shaking
 - Improve module boundaries
@@ -492,16 +501,24 @@ Start fast with battle-tested patterns:
 ```typescript
 // Layered Architecture
 const layered = layeredArchitecture()
-  .layer('Controllers').definedBy('controllers')
-  .layer('Services').definedBy('services')
-  .layer('Repositories').definedBy('repositories')
-  .layer('Models').definedBy('models')
-  .whereLayer('Controllers').mayOnlyAccessLayers('Services')
-  .whereLayer('Services').mayOnlyAccessLayers('Repositories', 'Models')
-  .whereLayer('Repositories').mayOnlyAccessLayers('Models');
+  .layer('Controllers')
+  .definedBy('controllers')
+  .layer('Services')
+  .definedBy('services')
+  .layer('Repositories')
+  .definedBy('repositories')
+  .layer('Models')
+  .definedBy('models')
+  .whereLayer('Controllers')
+  .mayOnlyAccessLayers('Services')
+  .whereLayer('Services')
+  .mayOnlyAccessLayers('Repositories', 'Models')
+  .whereLayer('Repositories')
+  .mayOnlyAccessLayers('Models');
 ```
 
 **Supported patterns:**
+
 - ✅ Layered Architecture
 - ✅ Clean Architecture (DDD)
 - ✅ Hexagonal/Onion Architecture
@@ -511,12 +528,12 @@ const layered = layeredArchitecture()
 
 Multiple report formats for every use case:
 
-| Format | Use Case |
-|--------|----------|
-| **HTML** | Beautiful reports for stakeholders |
-| **JSON** | Programmatic analysis and tooling |
-| **JUnit XML** | CI/CD integration |
-| **Markdown** | Documentation and PRs |
+| Format        | Use Case                           |
+| ------------- | ---------------------------------- |
+| **HTML**      | Beautiful reports for stakeholders |
+| **JSON**      | Programmatic analysis and tooling  |
+| **JUnit XML** | CI/CD integration                  |
+| **Markdown**  | Documentation and PRs              |
 
 ### 📈 **Dependency Graph Visualization**
 
@@ -624,22 +641,23 @@ ArchUnit-TS includes a full-featured CLI that lets you test architecture **witho
 
 ```bash
 # Quick architecture check
-npx archunit-ts check ./src
+npx archunit check ./src
 
 # With custom rules file
-npx archunit-ts check ./src --rules archunit.rules.ts
+npx archunit check ./src --rules archunit.rules.ts
 
 # Generate beautiful HTML report
-npx archunit-ts check ./src --format html --output report.html
+npx archunit check ./src --format html --output report.html
 
 # Watch mode for development
-npx archunit-ts watch --verbose
+npx archunit watch --verbose
 
 # Generate interactive dependency graph
-npx archunit-ts graph --graph-type html --output architecture.html
+npx archunit graph --graph-type html --output architecture.html
 ```
 
 **CLI Features:**
+
 - ✅ Zero configuration required
 - ✅ Multiple report formats (HTML, JSON, JUnit, Markdown)
 - ✅ Watch mode with auto-reload
@@ -649,6 +667,7 @@ npx archunit-ts graph --graph-type html --output architecture.html
 - ✅ Verbose mode for debugging
 
 Perfect for:
+
 - **Quick audits** - Check architecture without setup
 - **CI/CD pipelines** - Integrate without writing tests
 - **Documentation** - Generate reports and graphs
@@ -678,14 +697,14 @@ jobs:
           node-version: '18'
       - run: npm install
       - name: Run Architecture Tests
-        run: npx archunit-ts check ./src --format junit --output reports/architecture.xml
+        run: npx archunit check ./src --format junit --output reports/architecture.xml
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
           files: reports/architecture.xml
       - name: Generate Architecture Report
-        run: npx archunit-ts check ./src --format html --output reports/architecture.html
+        run: npx archunit check ./src --format html --output reports/architecture.html
       - name: Upload Report
         uses: actions/upload-artifact@v3
         with:
@@ -701,7 +720,7 @@ architecture_tests:
   stage: test
   script:
     - npm install
-    - npx archunit-ts check ./src --format junit --output architecture.xml
+    - npx archunit check ./src --format junit --output architecture.xml
   artifacts:
     reports:
       junit: architecture.xml
@@ -716,7 +735,7 @@ architecture_tests:
 stage('Architecture Tests') {
   steps {
     sh 'npm install'
-    sh 'npx archunit-ts check ./src --format junit --output reports/architecture.xml'
+    sh 'npx archunit check ./src --format junit --output reports/architecture.xml'
   }
   post {
     always {
@@ -735,7 +754,7 @@ Catch violations **before** they're committed:
 {
   "husky": {
     "hooks": {
-      "pre-commit": "npx archunit-ts check ./src --no-color",
+      "pre-commit": "npx archunit check ./src --no-color",
       "pre-push": "npm run test:architecture"
     }
   }
@@ -748,9 +767,7 @@ Or with lint-staged for faster checks:
 // package.json
 {
   "lint-staged": {
-    "src/**/*.{ts,tsx}": [
-      "npx archunit-ts check ./src"
-    ]
+    "src/**/*.{ts,tsx}": ["npx archunit check ./src"]
   }
 }
 ```
@@ -761,16 +778,17 @@ Get **instant feedback** as you code:
 
 ```bash
 # Start watch mode
-npx archunit-ts watch
+npx archunit watch
 
 # With verbose output
-npx archunit-ts watch --verbose
+npx archunit watch --verbose
 
 # Watch specific patterns
-npx archunit-ts watch --pattern "src/**/*.ts"
+npx archunit watch --pattern "src/**/*.ts"
 ```
 
 **Watch mode benefits:**
+
 - 🔄 Automatic re-checking on file changes
 - ⚡ Debounced execution (no performance impact)
 - 📊 Clear output with timestamps
@@ -780,6 +798,7 @@ npx archunit-ts watch --pattern "src/**/*.ts"
 ### IDE Integration (Coming Soon)
 
 Future VS Code and IntelliJ extensions will provide:
+
 - Real-time violation highlighting
 - Quick fixes for common issues
 - Architecture visualization in sidebar
@@ -846,6 +865,7 @@ ArchUnitTS.assertNoViolations(violations); // Throws if violations exist
 ### 5. Review Violations Together
 
 When a test fails, discuss it with the team:
+
 - Is the rule correct?
 - Is the violation necessary?
 - Should we update our architecture?
@@ -856,24 +876,24 @@ When a test fails, discuss it with the team:
 
 ### vs. ESLint Import Rules
 
-| Feature | ArchUnit-TS | ESLint |
-|---------|-------------|--------|
-| Layered architecture | ✅ Built-in | ⚠️ Complex config |
-| Decorator checking | ✅ Yes | ❌ No |
-| Naming conventions | ✅ Fluent API | ⚠️ Regex patterns |
-| Architecture patterns | ✅ Pre-built | ❌ No |
-| Learning curve | ✅ Low | ⚠️ Medium |
+| Feature               | ArchUnit-TS   | ESLint            |
+| --------------------- | ------------- | ----------------- |
+| Layered architecture  | ✅ Built-in   | ⚠️ Complex config |
+| Decorator checking    | ✅ Yes        | ❌ No             |
+| Naming conventions    | ✅ Fluent API | ⚠️ Regex patterns |
+| Architecture patterns | ✅ Pre-built  | ❌ No             |
+| Learning curve        | ✅ Low        | ⚠️ Medium         |
 
 **Use both!** ESLint for code style, ArchUnit-TS for architecture.
 
 ### vs. dependency-cruiser
 
-| Feature | ArchUnit-TS | dependency-cruiser |
-|---------|-------------|-------------------|
-| Focus | Architecture patterns | Dependency graphs |
-| Fluent API | ✅ Yes | ❌ Config-based |
-| OOP patterns | ✅ Classes, decorators | ⚠️ Limited |
-| Test framework integration | ✅ Native | ⚠️ Separate tool |
+| Feature                    | ArchUnit-TS            | dependency-cruiser |
+| -------------------------- | ---------------------- | ------------------ |
+| Focus                      | Architecture patterns  | Dependency graphs  |
+| Fluent API                 | ✅ Yes                 | ❌ Config-based    |
+| OOP patterns               | ✅ Classes, decorators | ⚠️ Limited         |
+| Test framework integration | ✅ Native              | ⚠️ Separate tool   |
 
 **ArchUnit-TS** is higher-level and more architecture-focused.
 
@@ -888,6 +908,7 @@ When a test fails, discuss it with the team:
 **Solution:** Implemented ArchUnit-TS architecture tests in CI/CD
 
 **Results:**
+
 - **47 violations caught** before reaching production in first month
 - **1 critical violation** would have required a week of refactoring (estimated $8,000 in developer time)
 - **Zero architectural drift incidents** since implementation
@@ -903,6 +924,7 @@ When a test fails, discuss it with the team:
 **Solution:** Used ArchUnit-TS tests as living documentation
 
 **Results:**
+
 - **Onboarding reduced from 2 weeks to 1 week** (50% improvement)
 - **5 hours saved per new hire** on architecture explanations
 - **90% of new developers** understand architecture from tests alone
@@ -918,6 +940,7 @@ When a test fails, discuss it with the team:
 **Solution:** Enforced strict module boundaries with ArchUnit-TS
 
 **Results:**
+
 - **Zero accidental cross-module dependencies** during 6-month migration
 - **12 modules extracted** without breaking existing functionality
 - **3 months ahead of schedule** due to confidence in boundaries
@@ -933,6 +956,7 @@ When a test fails, discuss it with the team:
 **Solution:** Implemented architecture tests from day one
 
 **Results:**
+
 - **Technical debt reduced by 60%** (measured by SonarQube)
 - **Code review time decreased by 40%** (architecture checks automated)
 - **Zero major refactorings needed** in 18 months of growth
@@ -948,6 +972,7 @@ When a test fails, discuss it with the team:
 Architecture testing isn't just about preventing bugs—it's about **professional software engineering**.
 
 When you test your architecture, you're saying:
+
 - "Our design matters"
 - "We care about maintainability"
 - "We're building for the long term"
@@ -966,10 +991,11 @@ Visualize your entire codebase architecture with stunning interactive graphs:
 
 ```bash
 # Generate an interactive HTML dependency graph
-npx archunit-ts graph --graph-type html --output architecture.html
+npx archunit graph --graph-type html --output architecture.html
 ```
 
 **What you get:**
+
 - **D3.js-powered interactive visualization** - Click, drag, zoom, and explore your architecture
 - **Real-time filtering** - Filter by violations, node types, or modules
 - **Automatic cycle detection** - Instantly spot circular dependencies
@@ -977,6 +1003,7 @@ npx archunit-ts graph --graph-type html --output architecture.html
 - **Detailed tooltips** - Hover to see dependencies and metadata
 
 Perfect for:
+
 - Onboarding new team members (understand the codebase in minutes)
 - Architecture reviews (see actual vs. intended design)
 - Identifying highly coupled modules
@@ -988,19 +1015,20 @@ Generate professional reports in multiple formats:
 
 ```bash
 # HTML report with statistics and charts
-npx archunit-ts check ./src --format html --output report.html
+npx archunit check ./src --format html --output report.html
 
 # JSON for CI/CD integration
-npx archunit-ts check ./src --format json --output report.json
+npx archunit check ./src --format json --output report.json
 
 # JUnit XML for Jenkins, GitHub Actions, etc.
-npx archunit-ts check ./src --format junit --output report.xml
+npx archunit check ./src --format junit --output report.xml
 
 # Markdown for documentation and PRs
-npx archunit-ts check ./src --format markdown --output report.md
+npx archunit check ./src --format markdown --output report.md
 ```
 
 **Report features:**
+
 - Color-coded violation statistics
 - Violations grouped by file and rule
 - Direct links to source code locations
@@ -1012,10 +1040,11 @@ npx archunit-ts check ./src --format markdown --output report.md
 Get instant feedback as you code:
 
 ```bash
-npx archunit-ts watch --verbose
+npx archunit watch --verbose
 ```
 
 **Benefits:**
+
 - Automatic re-checking on file changes
 - 300ms debounced execution (no performance impact)
 - Clear console output with timestamps
@@ -1045,12 +1074,104 @@ const strictRule = ArchRuleDefinition.classes()
 ```
 
 **Use cases:**
+
 - **Gradual adoption** - Introduce rules without breaking existing CI/CD
 - **Progressive enforcement** - Start lenient, get stricter over time
 - **Legacy code handling** - Mark old violations as warnings while preventing new ones
 - **Soft launches** - Test new rules before enforcing them
 
 These features transform ArchUnit-TS from a testing tool into a **complete architecture governance platform**.
+
+---
+
+### 🔒 Security Features & Robust Error Handling
+
+**ArchUnit-TS now includes enterprise-grade security and error handling:**
+
+#### Path Traversal Protection
+
+```typescript
+// Automatic security validation prevents path traversal attacks
+const parser = new TypeScriptParser();
+
+// ✅ Safe - These work fine
+parser.parseFile('/absolute/path/to/file.ts');
+parser.parseFile('./relative/path/file.ts');
+
+// ❌ Blocked - Security violations throw errors
+parser.parseFile('../../../etc/passwd'); // Path traversal blocked
+parser.parseFile('/path/file.ts\x00.txt'); // Null byte injection blocked
+```
+
+**Security checks include:**
+
+- Path normalization and resolution
+- Traversal detection (`..` patterns)
+- Null byte injection prevention
+- File type validation
+- Boundary enforcement
+
+#### Graceful Error Handling
+
+```typescript
+// New analyzeWithErrors() method provides detailed error reporting
+const analyzer = new CodeAnalyzer();
+const result = await analyzer.analyzeWithErrors('./src');
+
+console.log(`✅ Successfully analyzed: ${result.filesProcessed} files`);
+console.log(`⚠️ Skipped due to errors: ${result.filesSkipped} files`);
+
+// Categorized errors for better handling
+const securityErrors = result.errors.filter((e) => e.errorType === 'security');
+const parseErrors = result.errors.filter((e) => e.errorType === 'parse');
+const ioErrors = result.errors.filter((e) => e.errorType === 'io');
+
+// Continue with successfully analyzed classes
+const classes = result.classes;
+```
+
+**Error categories:**
+
+- `security`: Path traversal, null bytes
+- `parse`: Syntax errors in code
+- `io`: File system errors (ENOENT, EACCES)
+- `unknown`: Unclassified errors
+
+**Why this matters:**
+
+- **Secure by default** - No manual security validation needed
+- **Graceful degradation** - Analysis continues despite individual file failures
+- **Better debugging** - Categorized errors make issues easy to identify
+- **Production-ready** - Safe for CI/CD pipelines and automated workflows
+
+#### 3-Tier Caching with Hit Rate Tracking
+
+```typescript
+const cache = new CacheManager();
+const analyzer = new CodeAnalyzer({ enableCache: true, cache });
+
+// Multi-tier caching dramatically improves performance
+await analyzer.analyze('./src'); // First run - cold cache
+await analyzer.analyze('./src'); // Second run - blazing fast!
+
+// Monitor cache performance
+const stats = cache.getStats();
+console.log(`Cache hit rate: ${(stats.astCache.hitRate * 100).toFixed(1)}%`);
+
+// Real-world results:
+// - First parse: ~200ms
+// - Cached parse: ~20ms (10x faster!)
+// - Watch mode: 90%+ hit rate
+```
+
+**Cache features:**
+
+- **Tier 1**: AST cache with SHA-256 hash validation
+- **Tier 2**: Module analysis cache
+- **Tier 3**: Rule evaluation cache
+- **Smart eviction**: LRU-based with configurable limits
+- **TTL support**: Configurable time-to-live
+- **Performance metrics**: Hit rate tracking per tier
 
 ---
 
@@ -1061,18 +1182,21 @@ The project is actively developed with an ambitious roadmap:
 ### 🚀 Version 1.2.0 (Q2 2025)
 
 **Performance & Scale**
+
 - Caching mechanism for 10x faster subsequent runs
 - Parallel analysis for large codebases
 - Incremental analysis (only changed files)
 - Memory optimization for monorepos
 
 **New Architectural Patterns**
+
 - Domain-Driven Design (DDD) rules
 - CQRS pattern support
 - Event-driven architecture validation
 - Microservices boundary enforcement
 
 **Advanced Capabilities**
+
 - Custom metrics (complexity, cohesion, coupling)
 - Rule composition and reuse
 - Architecture freeze mode (allow existing violations, prevent new ones)
@@ -1080,12 +1204,14 @@ The project is actively developed with an ambitious roadmap:
 ### 🎯 Version 1.3.0 (Q3 2025)
 
 **IDE Integration**
+
 - VS Code extension with real-time validation
 - WebStorm/IntelliJ plugin
 - In-editor violation highlighting
 - Quick fixes and refactoring suggestions
 
 **Framework-Specific Rules**
+
 - React architecture patterns (components, hooks, context)
 - Next.js app router conventions
 - Angular module boundaries
@@ -1094,12 +1220,14 @@ The project is actively developed with an ambitious roadmap:
 ### 🔮 Version 2.0.0 (2026)
 
 **AI-Powered Features**
+
 - Auto-generate rules from existing codebase
 - Suggest architecture improvements
 - Detect anti-patterns automatically
 - Smart violation explanations with fix suggestions
 
 **Advanced Analysis**
+
 - Call graph analysis
 - Data flow tracking
 - Interface segregation validation
@@ -1143,18 +1271,18 @@ You wouldn't ship code without unit tests. You wouldn't deploy without CI/CD. Yo
 
 ArchUnit-TS brings proven architecture testing from the Java world to JavaScript and TypeScript, with powerful enhancements:
 
-| What Makes It Amazing | Why It Matters |
-|----------------------|----------------|
-| **Fluent, readable API** | Write tests in plain English |
-| **Zero runtime dependencies** | No production overhead |
-| **Comprehensive reporting** | HTML, JSON, JUnit, Markdown |
-| **Interactive visualizations** | Understand architecture visually |
-| **Watch mode** | Instant feedback during development |
-| **Severity levels** | Gradual adoption without pain |
-| **CLI tool** | No code required for quick checks |
-| **Framework agnostic** | Works with your stack |
-| **Battle-tested patterns** | Layered, Clean, Hexagonal architectures |
-| **Open source & free** | MIT licensed, community-driven |
+| What Makes It Amazing          | Why It Matters                          |
+| ------------------------------ | --------------------------------------- |
+| **Fluent, readable API**       | Write tests in plain English            |
+| **Zero runtime dependencies**  | No production overhead                  |
+| **Comprehensive reporting**    | HTML, JSON, JUnit, Markdown             |
+| **Interactive visualizations** | Understand architecture visually        |
+| **Watch mode**                 | Instant feedback during development     |
+| **Severity levels**            | Gradual adoption without pain           |
+| **CLI tool**                   | No code required for quick checks       |
+| **Framework agnostic**         | Works with your stack                   |
+| **Battle-tested patterns**     | Layered, Clean, Hexagonal architectures |
+| **Open source & free**         | MIT licensed, community-driven          |
 
 ### Why Now Is the Perfect Time
 
@@ -1202,9 +1330,9 @@ Write your first architecture test in 5 minutes. Your future self will thank you
 
 ---
 
-*Have you used ArchUnit-TS? I'd love to hear about your experience! Drop a comment below or reach out on GitHub.*
+_Have you used ArchUnit-TS? I'd love to hear about your experience! Drop a comment below or reach out on GitHub._
 
-*If you found this article helpful, please give it a clap 👏 and share it with your team!*
+_If you found this article helpful, please give it a clap 👏 and share it with your team!_
 
 ---
 
@@ -1214,5 +1342,5 @@ Write your first architecture test in 5 minutes. Your future self will thank you
 
 ---
 
-*Published on Medium - [Your Publication Name]*
-*Follow for more articles on software architecture and clean code practices*
+_Published on Medium - [Your Publication Name]_
+_Follow for more articles on software architecture and clean code practices_

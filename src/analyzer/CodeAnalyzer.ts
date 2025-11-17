@@ -25,7 +25,22 @@ export interface AnalysisResult {
 }
 
 /**
- * Analyzes TypeScript/JavaScript codebases
+ * Analyzes TypeScript/JavaScript codebases to extract class information,
+ * dependencies, and architectural structure.
+ *
+ * @example
+ * ```typescript
+ * const analyzer = new CodeAnalyzer({ enableCache: true });
+ * const classes = await analyzer.analyze('./src');
+ * ```
+ *
+ * @example
+ * // With error handling
+ * ```typescript
+ * const result = await analyzer.analyzeWithErrors('./src');
+ * console.log(`Analyzed ${result.filesProcessed} files`);
+ * console.log(`Errors: ${result.errors.length}`);
+ * ```
  */
 export class CodeAnalyzer {
   private parser: TypeScriptParser;
@@ -34,6 +49,26 @@ export class CodeAnalyzer {
   private cache: CacheManager;
   private enableCache: boolean;
 
+  /**
+   * Creates a new CodeAnalyzer instance
+   *
+   * @param options Configuration options
+   * @param options.enableCache Enable caching of parsed ASTs (default: true)
+   * @param options.cache Custom cache manager instance (default: global cache)
+   *
+   * @example
+   * ```typescript
+   * // With caching enabled (default)
+   * const analyzer = new CodeAnalyzer();
+   *
+   * // With custom cache
+   * const customCache = new CacheManager({ maxCacheSize: 500 });
+   * const analyzer = new CodeAnalyzer({ cache: customCache });
+   *
+   * // With caching disabled
+   * const analyzer = new CodeAnalyzer({ enableCache: false });
+   * ```
+   */
   constructor(options: { enableCache?: boolean; cache?: CacheManager } = {}) {
     this.parser = new TypeScriptParser();
     this.modules = new Map();
@@ -68,7 +103,21 @@ export class CodeAnalyzer {
   }
 
   /**
-   * Analyze files matching a pattern (legacy method for backward compatibility)
+   * Analyze files matching a pattern (legacy method for backward compatibility).
+   * Logs errors to console but does not throw. Use analyzeWithErrors() for detailed error information.
+   *
+   * @param basePath Base directory to start analysis from
+   * @param patterns Glob patterns for files to analyze (default: TypeScript and JavaScript files)
+   * @returns Collection of analyzed classes
+   *
+   * @example
+   * ```typescript
+   * const analyzer = new CodeAnalyzer();
+   * const classes = await analyzer.analyze('./src');
+   *
+   * // With custom patterns
+   * const tsOnly = await analyzer.analyze('./src', ['** /*.ts']);
+   * ```
    */
   public async analyze(
     basePath: string,
@@ -88,7 +137,47 @@ export class CodeAnalyzer {
   }
 
   /**
-   * Analyze files matching a pattern and return detailed error information
+   * Analyze files matching a pattern and return detailed error information.
+   * This method provides graceful error handling by continuing analysis even when
+   * individual files fail to parse, and returns comprehensive error details.
+   *
+   * @param basePath Base directory to start analysis from
+   * @param patterns Glob patterns for files to analyze (default: TypeScript and JavaScript files)
+   * @returns Analysis result containing classes, errors, and statistics
+   *
+   * @remarks
+   * Error types:
+   * - `parse`: Syntax errors in TypeScript/JavaScript files
+   * - `security`: Path traversal attempts or other security violations
+   * - `io`: File system errors (ENOENT, EACCES, etc.)
+   * - `unknown`: Unclassified errors
+   *
+   * @example
+   * ```typescript
+   * const analyzer = new CodeAnalyzer();
+   * const result = await analyzer.analyzeWithErrors('./src');
+   *
+   * console.log(`Successfully analyzed ${result.filesProcessed} files`);
+   * console.log(`Skipped ${result.filesSkipped} files due to errors`);
+   *
+   * // Handle errors by type
+   * const securityErrors = result.errors.filter(e => e.errorType === 'security');
+   * const parseErrors = result.errors.filter(e => e.errorType === 'parse');
+   *
+   * // Use the successfully analyzed classes
+   * const classes = result.classes;
+   * ```
+   *
+   * @example
+   * @example
+   * // Analyzing specific file types
+   * ```typescript
+   * const result = await analyzer.analyzeWithErrors('./src', [
+   *   '** /*.ts',
+   *   '!** /*.test.ts', // Exclude test files
+   *   '!** /node_modules/** '
+   * ]);
+   * ```
    */
   public async analyzeWithErrors(
     basePath: string,
