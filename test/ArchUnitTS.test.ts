@@ -1,4 +1,4 @@
-import ArchUnitTS, { createArchUnit, ArchRuleDefinition } from '../src/index';
+import ArchUnitTS, { createArchUnit, ArchRuleDefinition, Severity } from '../src/index';
 import * as path from 'path';
 
 describe('ArchUnitTS', () => {
@@ -70,6 +70,7 @@ describe('ArchUnitTS', () => {
           message: 'Test violation',
           filePath: '/test/file.ts',
           rule: 'Test rule',
+          severity: Severity.ERROR,
         },
       ];
 
@@ -84,6 +85,7 @@ describe('ArchUnitTS', () => {
           message: 'Class Foo violates rule',
           filePath: '/test/Foo.ts',
           rule: 'Test rule',
+          severity: Severity.ERROR,
         },
       ];
 

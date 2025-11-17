@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ArchitectureViolation } from '../types';
+import { ArchitectureViolation, Severity } from '../types';
 
 /**
  * Options for formatting violations
@@ -128,11 +128,26 @@ export class ViolationFormatter {
       ? `:${violation.location.line}:${violation.location.column}`
       : '';
 
+    // Format severity badge
+    const severityBadge = this.formatSeverity(violation.severity, options.colors);
+
     const fileLocation = this.colorize(`  ${filePath}${location}`, colors.cyan, options.colors);
 
-    const message = this.colorize(`  ${violation.message}`, colors.red, options.colors);
+    const messageColor = violation.severity === Severity.WARNING ? colors.yellow : colors.red;
+    const message = this.colorize(`  ${violation.message}`, messageColor, options.colors);
 
-    return `${message}\n${fileLocation}`;
+    return `${severityBadge} ${message}\n${fileLocation}`;
+  }
+
+  /**
+   * Format severity badge
+   */
+  private static formatSeverity(severity: Severity, useColors: boolean | undefined): string {
+    if (severity === Severity.WARNING) {
+      return this.colorize('[WARNING]', colors.yellow + colors.bright, useColors);
+    } else {
+      return this.colorize('[ERROR]', colors.red + colors.bright, useColors);
+    }
   }
 
   /**
@@ -230,6 +245,10 @@ export class ViolationFormatter {
       );
     }
 
+    // Separate by severity
+    const errors = violations.filter((v) => v.severity === Severity.ERROR);
+    const warnings = violations.filter((v) => v.severity === Severity.WARNING);
+
     // Group violations by file
     const violationsByFile = new Map<string, ArchitectureViolation[]>();
     for (const violation of violations) {
@@ -244,11 +263,20 @@ export class ViolationFormatter {
       options.colors
     );
 
+    // Show severity breakdown
     output += this.colorize(
       `  Total violations: ${violations.length} across ${violationsByFile.size} file(s)\n`,
       colors.red,
       options.colors
     );
+
+    if (errors.length > 0) {
+      output += this.colorize(`  Errors: ${errors.length}\n`, colors.red, options.colors);
+    }
+
+    if (warnings.length > 0) {
+      output += this.colorize(`  Warnings: ${warnings.length}\n`, colors.yellow, options.colors);
+    }
 
     output += '\n';
     output += this.colorize('  Violations by file:\n', colors.bright, options.colors);
@@ -258,8 +286,18 @@ export class ViolationFormatter {
         ? path.relative(process.cwd(), filePath)
         : filePath;
 
+      const fileErrors = fileViolations.filter((v) => v.severity === Severity.ERROR).length;
+      const fileWarnings = fileViolations.filter((v) => v.severity === Severity.WARNING).length;
+
+      const breakdown =
+        fileErrors > 0 && fileWarnings > 0
+          ? ` (${fileErrors} error(s), ${fileWarnings} warning(s))`
+          : fileErrors > 0
+            ? ` (${fileErrors} error(s))`
+            : ` (${fileWarnings} warning(s))`;
+
       output += this.colorize(
-        `    ${relativePath}: ${fileViolations.length} violation(s)\n`,
+        `    ${relativePath}: ${fileViolations.length} violation(s)${breakdown}\n`,
         colors.cyan,
         options.colors
       );

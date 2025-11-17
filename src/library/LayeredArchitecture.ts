@@ -25,6 +25,7 @@ interface LayerAccessRule {
 export class LayeredArchitecture extends BaseArchRule {
   private layers: Map<string, Layer> = new Map();
   private accessRules: LayerAccessRule[] = [];
+  private dependencyLayerCache: Map<string, string | null> = new Map();
 
   constructor() {
     super('Layered Architecture');
@@ -153,24 +154,35 @@ export class LayeredArchitecture extends BaseArchRule {
 
   /**
    * Find which layer a dependency belongs to
-   * OPTIMIZED: Uses hash maps for O(1) lookup
+   * OPTIMIZED: Uses hash maps for O(1) lookup + caching for repeated lookups
    */
   private findLayerForDependency(
     dependency: string,
     classNameToLayer: Map<string, string>,
     moduleToLayer: Map<string, string>
   ): string | null {
+    // Check cache first for O(1) lookup on repeated dependencies
+    if (this.dependencyLayerCache.has(dependency)) {
+      return this.dependencyLayerCache.get(dependency) || null;
+    }
+
     // Try exact class name match first
     const layerByName = classNameToLayer.get(dependency);
-    if (layerByName) return layerByName;
+    if (layerByName) {
+      this.dependencyLayerCache.set(dependency, layerByName);
+      return layerByName;
+    }
 
-    // Try module lookup (partial match)
+    // Try module lookup (partial match) - only runs once per unique dependency
     for (const [module, layer] of moduleToLayer.entries()) {
       if (module.includes(dependency) || dependency.includes(module)) {
+        this.dependencyLayerCache.set(dependency, layer);
         return layer;
       }
     }
 
+    // Cache negative results too to avoid repeated lookups
+    this.dependencyLayerCache.set(dependency, null);
     return null;
   }
 }

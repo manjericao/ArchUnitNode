@@ -57,6 +57,12 @@ ArchUnit-TS helps you maintain clean architecture in your TypeScript and JavaScr
 - ✅ **Decorator/annotation** checking
 - ✅ **Layered architecture** support
 - ✅ **Cyclic dependency** detection
+- ✅ **Custom predicates** for flexible class filtering
+- ✅ **Dependency graph visualization** (interactive HTML and Graphviz DOT formats)
+- ✅ **Report generation** (HTML, JSON, JUnit XML, Markdown)
+- ✅ **CLI tool** for command-line usage
+- ✅ **Watch mode** for automatic re-checking on file changes
+- ✅ **Severity levels** (errors vs warnings) for flexible enforcement
 - ✅ **TypeScript & JavaScript** support
 - ✅ **Integration with Jest** and other test frameworks
 - ✅ **Zero runtime dependencies** in production
@@ -176,6 +182,40 @@ const domainRule = ArchRuleDefinition.classes()
   .notDependOnClassesThat()
   .resideInPackage('infrastructure');
 ```
+
+### Severity Levels
+
+Control whether violations fail the build (errors) or just warn (warnings):
+
+```typescript
+import { ArchRuleDefinition } from 'archunit-ts';
+
+// ERROR: Will fail the build (default)
+const strictRule = ArchRuleDefinition.classes()
+  .that()
+  .resideInPackage('services')
+  .should()
+  .haveSimpleNameEndingWith('Service');
+
+// WARNING: Won't fail the build, but will show in output
+const lenientRule = ArchRuleDefinition.classes()
+  .that()
+  .resideInPackage('legacy')
+  .should()
+  .haveSimpleNameEndingWith('Service')
+  .asWarning();
+
+// Progressive enforcement: Start with warnings, promote to errors later
+const phase1Rule = someRule.asWarning(); // Phase 1: Team addresses issues
+const phase2Rule = someRule.asError(); // Phase 2: Enforce strictly
+```
+
+Use cases:
+
+- **Gradual adoption**: Mark legacy code violations as warnings
+- **Soft launches**: Introduce new rules as warnings first
+- **Non-blocking checks**: Informational rules that shouldn't fail builds
+- **Progressive enforcement**: Start lenient, get stricter over time
 
 ## API Documentation
 
@@ -335,10 +375,291 @@ const violations = await archUnit.checkRule(
 ### Ignoring Files
 
 Automatically ignored:
+
 - `node_modules/`
 - `dist/`
 - `build/`
 - `*.d.ts` files
+
+## CLI Usage
+
+The CLI tool allows you to run architecture checks from the command line without writing test code.
+
+### Basic Usage
+
+```bash
+npx archunit-ts check ./src
+```
+
+### Specify Rules File
+
+```bash
+npx archunit-ts check ./src --rules archunit.rules.ts
+```
+
+### Generate Reports
+
+ArchUnit-TS can generate reports in multiple formats:
+
+```bash
+# Generate HTML report
+npx archunit-ts check ./src --format html --output reports/architecture.html
+
+# Generate JSON report
+npx archunit-ts check ./src --format json --output reports/architecture.json
+
+# Generate JUnit XML report (for CI/CD integration)
+npx archunit-ts check ./src --format junit --output reports/architecture.xml
+
+# Generate Markdown report
+npx archunit-ts check ./src --format markdown --output reports/architecture.md
+
+# Custom report title
+npx archunit-ts check ./src --format html --output report.html --report-title "My Project Architecture"
+```
+
+### Watch Mode
+
+Enable automatic architecture checks when files change:
+
+```bash
+# Start watch mode
+npx archunit-ts watch
+
+# Watch with custom config
+npx archunit-ts watch --config custom.config.js
+
+# Watch specific patterns
+npx archunit-ts watch --pattern "src/**/*.ts"
+
+# Watch with verbose output
+npx archunit-ts watch --verbose
+```
+
+Watch mode features:
+
+- Automatic re-checking on file changes
+- Debounced execution (300ms default)
+- Clear console output with timestamps
+- Shows which files changed
+- Graceful shutdown with Ctrl+C
+- Ignores node_modules, dist, build, and .d.ts files
+
+### CLI Options
+
+- `--rules <path>` - Path to rules configuration file
+- `--format <format>` - Report format: html, json, junit, or markdown
+- `--output <path>` - Output path for report
+- `--report-title <title>` - Custom title for the report
+- `--graph-type <type>` - Graph format: dot or html (for graph command)
+- `--graph-title <title>` - Custom title for the graph
+- `--direction <dir>` - Graph direction: LR, TB, RL, or BT (for DOT graphs)
+- `--include-interfaces` - Include interfaces in dependency graph
+- `--width <pixels>` - Graph width for HTML output (default: 1200)
+- `--height <pixels>` - Graph height for HTML output (default: 800)
+- `--no-color` - Disable colored output
+- `--no-context` - Disable code context in violations
+- `--verbose, -v` - Show verbose output
+- `--help` - Show help
+- `--version` - Show version
+
+## Dependency Graph Visualization
+
+ArchUnit-TS can generate visual dependency graphs to help you understand and analyze your codebase structure.
+
+### Interactive HTML Graph
+
+Generate an interactive, D3.js-powered dependency graph that you can explore in your browser:
+
+```bash
+# Generate interactive HTML graph
+archunit-ts graph --graph-type html --output ./docs/dependencies.html
+
+# With custom options
+archunit-ts graph --graph-type html --output ./graph.html \
+  --graph-title "My Project Dependencies" \
+  --width 1600 --height 900 \
+  --include-interfaces
+```
+
+Features of the HTML graph:
+
+- **Interactive exploration** - Click and drag nodes, zoom and pan
+- **Real-time filtering** - Filter by node type or violations
+- **Physics simulation** - Adjustable force-directed layout
+- **Detailed tooltips** - Hover to see dependencies and metadata
+- **Cycle detection** - Automatically highlights if cycles are present
+- **Color-coded nodes** - Different colors for classes, interfaces, and violations
+
+### Graphviz DOT Format
+
+Generate DOT files for use with Graphviz to create publication-quality diagrams:
+
+```bash
+# Generate DOT file
+archunit-ts graph --graph-type dot --output ./docs/dependencies.dot
+
+# Convert to PNG using Graphviz (requires graphviz installation)
+dot -Tpng ./docs/dependencies.dot -o ./docs/dependencies.png
+
+# Convert to SVG
+dot -Tsvg ./docs/dependencies.dot -o ./docs/dependencies.svg
+
+# With custom layout direction
+archunit-ts graph --graph-type dot --output ./graph.dot --direction LR
+```
+
+DOT graph features:
+
+- **Module clustering** - Nodes grouped by module/package
+- **Relationship types** - Different styles for inheritance, implementation, and imports
+- **Metadata labels** - Shows decorators and abstract classes
+- **Violation highlighting** - Nodes with violations are highlighted in red
+
+### Programmatic API
+
+Generate graphs programmatically in your code:
+
+```typescript
+import { createArchUnit } from 'archunit-ts';
+
+const archUnit = createArchUnit();
+
+// Generate interactive HTML graph
+await archUnit.generateHtmlGraph('./src', './docs/graph.html', {
+  graphOptions: {
+    title: 'My Application Architecture',
+    width: 1600,
+    height: 900,
+    showLegend: true,
+    enablePhysics: true,
+  },
+  builderOptions: {
+    includeInterfaces: true,
+  },
+});
+
+// Generate DOT graph
+await archUnit.generateDotGraph('./src', './docs/graph.dot', {
+  graphOptions: {
+    title: 'Dependency Graph',
+    direction: 'LR',
+    clusterByModule: true,
+    useColors: true,
+  },
+});
+
+// Work with the graph data structure
+const graph = await archUnit.createDependencyGraph('./src');
+const stats = graph.getStats();
+console.log(`Nodes: ${stats.nodeCount}, Edges: ${stats.edgeCount}`);
+console.log(`Has cycles: ${stats.hasCycles}`);
+```
+
+### Use Cases
+
+- **Onboarding** - Help new team members understand the codebase structure
+- **Architecture reviews** - Visualize actual vs intended architecture
+- **Refactoring planning** - Identify highly coupled modules
+- **Documentation** - Auto-generate architecture diagrams
+- **Cycle detection** - Find and eliminate circular dependencies
+
+## Report Generation
+
+ArchUnit-TS provides comprehensive reporting capabilities to visualize and share architecture violations.
+
+### Supported Formats
+
+1. **HTML** - Interactive, styled reports with statistics
+2. **JSON** - Machine-readable format for tooling integration
+3. **JUnit XML** - CI/CD integration (Jenkins, GitHub Actions, etc.)
+4. **Markdown** - Documentation and PR integration
+
+### Programmatic API
+
+You can also generate reports programmatically:
+
+```typescript
+import { createArchUnit, createReportManager, ReportFormat, ArchRuleDefinition } from 'archunit-ts';
+
+const archUnit = createArchUnit();
+const reportManager = createReportManager();
+
+// Define and check rules
+const rule = ArchRuleDefinition.classes()
+  .that()
+  .resideInPackage('services')
+  .should()
+  .haveSimpleNameEndingWith('Service');
+
+const violations = await archUnit.checkRule('./src', rule);
+
+// Generate HTML report
+await reportManager.generateReport(violations, {
+  format: ReportFormat.HTML,
+  outputPath: 'reports/architecture.html',
+  title: 'Architecture Report',
+  includeTimestamp: true,
+  includeStats: true,
+});
+
+// Generate multiple reports at once
+await reportManager.generateMultipleReports(
+  violations,
+  [ReportFormat.HTML, ReportFormat.JSON, ReportFormat.JUNIT],
+  'reports/',
+  {
+    title: 'Architecture Analysis',
+  }
+);
+```
+
+### Report Contents
+
+All reports include:
+
+- **Metadata**: Title, timestamp, total violations
+- **Statistics**: Total files affected, rules checked, pass/fail counts
+- **Violations**: Detailed list grouped by file and rule
+- **Source Locations**: File paths and line numbers for each violation
+
+### HTML Report Features
+
+- Clean, responsive design
+- Color-coded statistics
+- Violations grouped by file
+- Direct links to source code locations
+- Success indicators when no violations found
+
+### CI/CD Integration
+
+Use JUnit format for seamless CI/CD integration:
+
+```yaml
+# GitHub Actions example
+- name: Run Architecture Tests
+  run: npx archunit-ts check ./src --format junit --output reports/architecture.xml
+
+- name: Publish Test Results
+  uses: EnricoMi/publish-unit-test-result-action@v2
+  if: always()
+  with:
+    files: reports/architecture.xml
+```
+
+```groovy
+// Jenkins Pipeline example
+stage('Architecture Tests') {
+  steps {
+    sh 'npx archunit-ts check ./src --format junit --output reports/architecture.xml'
+  }
+  post {
+    always {
+      junit 'reports/architecture.xml'
+    }
+  }
+}
+```
 
 ## Best Practices
 
@@ -347,6 +668,7 @@ Automatically ignored:
 3. **Start Small**: Begin with simple rules and expand gradually
 4. **Document Intent**: Use clear, descriptive rule definitions
 5. **Fail Fast**: Configure tests to fail on first violation for faster feedback
+6. **Generate Reports**: Use reports to communicate violations to your team
 
 ## Examples
 

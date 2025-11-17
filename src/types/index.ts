@@ -108,12 +108,39 @@ export interface Dependency {
   location: SourceLocation;
 }
 
+/**
+ * Severity levels for architecture violations
+ */
+export enum Severity {
+  ERROR = 'error',
+  WARNING = 'warning',
+}
+
 export interface ArchitectureViolation {
   message: string;
   filePath: string;
   location?: SourceLocation;
   rule: string;
+  severity: Severity;
 }
 
 export type PredicateFunction<T> = (item: T) => boolean;
 export type ConditionFunction<T> = (item: T) => boolean;
+
+/**
+ * Custom predicate function for filtering classes
+ * Provides access to TSClass class instance for custom filtering logic
+ * Note: Uses the TSClass class type, not the interface
+ */
+export type ClassPredicate = (cls: {
+  readonly name: string;
+  readonly filePath: string;
+  readonly module: string;
+  readonly extends?: string;
+  readonly implements: string[];
+  readonly decorators: TSDecorator[];
+  readonly methods: TSMethod[];
+  readonly properties: TSProperty[];
+  readonly isAbstract: boolean;
+  readonly isExported: boolean;
+}) => boolean;

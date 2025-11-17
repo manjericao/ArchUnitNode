@@ -1,5 +1,6 @@
 import { TSClasses } from '../core/TSClasses';
 import { ClassesShould } from './syntax/ClassesShould';
+import { ClassPredicate, Severity } from '../types';
 
 /**
  * Entry point for defining architecture rules using fluent API
@@ -33,9 +34,19 @@ export class ArchRuleDefinition {
 export class ClassesSelector {
   /**
    * Filter classes with "that" conditions
+   * @param predicate Optional custom predicate function for filtering classes
+   * @example
+   * // Using built-in filters
+   * classes().that().resideInPackage('services')
+   *
+   * // Using custom predicate
+   * classes().that((cls) => cls.methods.length > 10)
+   *
+   * // Combining custom predicate with built-in filters
+   * classes().that((cls) => cls.isExported).resideInPackage('api')
    */
-  public that(): ClassesThatStatic {
-    return new ClassesThatStatic();
+  public that(predicate?: ClassPredicate): ClassesThatStatic {
+    return new ClassesThatStatic(false, predicate);
   }
 
   /**
@@ -52,9 +63,10 @@ export class ClassesSelector {
 export class NoClassesSelector {
   /**
    * Filter classes with "that" conditions
+   * @param predicate Optional custom predicate function for filtering classes
    */
-  public that(): ClassesThatStatic {
-    return new ClassesThatStatic(true);
+  public that(predicate?: ClassPredicate): ClassesThatStatic {
+    return new ClassesThatStatic(true, predicate);
   }
 }
 
@@ -64,9 +76,16 @@ export class NoClassesSelector {
 export class ClassesThatStatic {
   private filters: Array<(classes: TSClasses) => TSClasses> = [];
   private negated: boolean;
+  private customPredicate?: ClassPredicate;
 
-  constructor(negated: boolean = false) {
+  constructor(negated: boolean = false, customPredicate?: ClassPredicate) {
     this.negated = negated;
+    this.customPredicate = customPredicate;
+
+    // If a custom predicate is provided, add it as the first filter
+    if (customPredicate) {
+      this.filters.push((classes) => classes.that(customPredicate));
+    }
   }
 
   /**
@@ -128,6 +147,14 @@ export class ClassesThatStatic {
    */
   public areAssignableTo(className: string): ClassesShouldStatic {
     this.filters.push((classes) => classes.areAssignableTo(className));
+    return new ClassesShouldStatic(this.filters, this.negated);
+  }
+
+  /**
+   * Move to "should" phase for defining assertions
+   * Allows using custom predicates directly with should()
+   */
+  public should(): ClassesShouldStatic {
     return new ClassesShouldStatic(this.filters, this.negated);
   }
 }
@@ -213,6 +240,16 @@ export class ClassesShouldStatic {
   }
 
   /**
+   * Classes should have names starting with a prefix
+   */
+  public haveSimpleNameStartingWith(prefix: string): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveSimpleNameStartingWith(prefix);
+    }, `Classes should have simple name starting with '${prefix}'`);
+  }
+
+  /**
    * Classes should only depend on classes in specific packages
    */
   public onlyDependOnClassesThat(): StaticClassesDependencyShould {
@@ -273,6 +310,8 @@ export class StaticClassesDependencyShould {
  * Static architecture rule that can be evaluated later
  */
 export class StaticArchRule {
+  private severity: Severity = Severity.ERROR;
+
   constructor(
     private ruleFactory: (classes: TSClasses) => import('../core/ArchRule').ArchRule,
     private description: string
@@ -283,6 +322,14 @@ export class StaticArchRule {
    */
   public check(classes: TSClasses): import('../types').ArchitectureViolation[] {
     const rule = this.ruleFactory(classes);
+
+    // Apply severity to the rule
+    if (this.severity === Severity.WARNING) {
+      rule.asWarning();
+    } else {
+      rule.asError();
+    }
+
     return rule.check(classes);
   }
 
@@ -291,5 +338,28 @@ export class StaticArchRule {
    */
   public getDescription(): string {
     return this.description;
+  }
+
+  /**
+   * Set this rule to warning severity (won't fail build)
+   */
+  public asWarning(): StaticArchRule {
+    this.severity = Severity.WARNING;
+    return this;
+  }
+
+  /**
+   * Set this rule to error severity (will fail build)
+   */
+  public asError(): StaticArchRule {
+    this.severity = Severity.ERROR;
+    return this;
+  }
+
+  /**
+   * Get the severity level of this rule
+   */
+  public getSeverity(): Severity {
+    return this.severity;
   }
 }
