@@ -154,6 +154,13 @@ export class ClassesShouldStatic {
   }
 
   /**
+   * Return self for fluent API continuation
+   */
+  public should(): ClassesShouldStatic {
+    return this;
+  }
+
+  /**
    * Classes should reside in a specific package
    */
   public resideInPackage(packagePattern: string): StaticArchRule {

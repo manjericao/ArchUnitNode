@@ -1,4 +1,5 @@
 import { TSClasses } from '../../core/TSClasses';
+import { TSClass } from '../../core/TSClass';
 import { ArchRule, BaseArchRule } from '../../core/ArchRule';
 import { ArchitectureViolation } from '../../types';
 
@@ -73,6 +74,20 @@ export class ClassesShould {
    */
   public notDependOnClassesThat(): ClassesDependencyShould {
     return new ClassesDependencyShould(this.tsClasses, true);
+  }
+
+  /**
+   * Classes should not form cyclic dependencies
+   */
+  public notFormCycles(): ArchRule {
+    return new CyclicDependencyRule(this.tsClasses, true);
+  }
+
+  /**
+   * Classes should form cycles (rarely used, for testing)
+   */
+  public formCycles(): ArchRule {
+    return new CyclicDependencyRule(this.tsClasses, false);
   }
 }
 
@@ -224,8 +239,40 @@ class DependencyPackageRule extends BaseArchRule {
 
   check(): ArchitectureViolation[] {
     const violations: ArchitectureViolation[] = [];
-    // This would need to be implemented with actual dependency analysis
-    // For now, returning empty array as placeholder
+
+    for (const cls of this.classes.getAll()) {
+      const dependencies = cls.getDependencies();
+
+      if (this.negated) {
+        // Should NOT depend on classes in this package
+        if (cls.dependsOnClassInPackage(this.packagePattern)) {
+          violations.push(
+            this.createViolation(
+              `Class '${cls.name}' should not depend on classes in package '${this.packagePattern}' but has dependencies: ${dependencies.filter(d => d.includes(this.packagePattern.replace(/\./g, '/'))).join(', ')}`,
+              cls.filePath,
+              this.description
+            )
+          );
+        }
+      } else {
+        // Should ONLY depend on classes in this package
+        const invalidDeps = dependencies.filter(dep => {
+          const pathPattern = this.packagePattern.replace(/\./g, '/');
+          return !dep.includes(pathPattern) && !dep.includes(this.packagePattern) && !dep.startsWith('.');
+        });
+
+        if (invalidDeps.length > 0) {
+          violations.push(
+            this.createViolation(
+              `Class '${cls.name}' should only depend on classes in package '${this.packagePattern}' but depends on: ${invalidDeps.join(', ')}`,
+              cls.filePath,
+              this.description
+            )
+          );
+        }
+      }
+    }
+
     return violations;
   }
 }
@@ -246,8 +293,157 @@ class DependencyMultiPackageRule extends BaseArchRule {
 
   check(): ArchitectureViolation[] {
     const violations: ArchitectureViolation[] = [];
-    // This would need to be implemented with actual dependency analysis
-    // For now, returning empty array as placeholder
+
+    for (const cls of this.classes.getAll()) {
+      const dependencies = cls.getDependencies();
+
+      if (this.negated) {
+        // Should NOT depend on classes in these packages
+        const forbiddenDeps = dependencies.filter(dep => {
+          return this.packagePatterns.some(pattern => {
+            const pathPattern = pattern.replace(/\./g, '/');
+            return dep.includes(pathPattern) || dep.includes(pattern);
+          });
+        });
+
+        if (forbiddenDeps.length > 0) {
+          violations.push(
+            this.createViolation(
+              `Class '${cls.name}' should not depend on classes in packages [${this.packagePatterns.join(', ')}] but depends on: ${forbiddenDeps.join(', ')}`,
+              cls.filePath,
+              this.description
+            )
+          );
+        }
+      } else {
+        // Should ONLY depend on classes in these packages
+        const invalidDeps = dependencies.filter(dep => {
+          // Ignore relative imports (usually internal)
+          if (dep.startsWith('.')) return false;
+
+          return !this.packagePatterns.some(pattern => {
+            const pathPattern = pattern.replace(/\./g, '/');
+            return dep.includes(pathPattern) || dep.includes(pattern);
+          });
+        });
+
+        if (invalidDeps.length > 0) {
+          violations.push(
+            this.createViolation(
+              `Class '${cls.name}' should only depend on classes in packages [${this.packagePatterns.join(', ')}] but depends on: ${invalidDeps.join(', ')}`,
+              cls.filePath,
+              this.description
+            )
+          );
+        }
+      }
+    }
+
     return violations;
+  }
+}
+
+/**
+ * Rule for checking cyclic dependencies
+ */
+class CyclicDependencyRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private shouldNotFormCycles: boolean
+  ) {
+    super(
+      `Classes should ${shouldNotFormCycles ? 'not form' : 'form'} cyclic dependencies`
+    );
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+    const cycles = this.findCycles();
+
+    if (this.shouldNotFormCycles && cycles.length > 0) {
+      // Report each cycle as a violation
+      for (const cycle of cycles) {
+        const cycleDescription = cycle.map(c => c.name).join(' -> ');
+        violations.push(
+          this.createViolation(
+            `Cyclic dependency detected: ${cycleDescription}`,
+            cycle[0].filePath,
+            this.description
+          )
+        );
+      }
+    } else if (!this.shouldNotFormCycles && cycles.length === 0) {
+      // This is rarely used, but for completeness
+      violations.push(
+        this.createViolation(
+          'No cyclic dependencies found, but cycles were expected',
+          '',
+          this.description
+        )
+      );
+    }
+
+    return violations;
+  }
+
+  private findCycles(): TSClass[][] {
+    const graph = new Map<string, TSClass>();
+    const cycles: TSClass[][] = [];
+
+    // Build class graph
+    for (const cls of this.classes.getAll()) {
+      graph.set(cls.name, cls);
+    }
+
+    const visited = new Set<string>();
+    const recursionStack = new Set<string>();
+
+    const dfs = (className: string, path: TSClass[]): void => {
+      visited.add(className);
+      recursionStack.add(className);
+      const currentClass = graph.get(className);
+
+      if (!currentClass) return;
+
+      path.push(currentClass);
+
+      // Get dependencies that are other classes in our analyzed set
+      const classDeps = currentClass.getDependencies()
+        .map(dep => {
+          // Extract class name from dependency path
+          const match = dep.match(/([^/]+)$/);
+          return match ? match[1].replace(/\.(ts|js|tsx|jsx)$/, '') : null;
+        })
+        .filter((name): name is string => name !== null && graph.has(name));
+
+      for (const depName of classDeps) {
+        if (!visited.has(depName)) {
+          dfs(depName, [...path]);
+        } else if (recursionStack.has(depName)) {
+          // Found a cycle
+          const cycleStart = path.findIndex(c => c.name === depName);
+          if (cycleStart !== -1) {
+            const cycle = [...path.slice(cycleStart), currentClass];
+            // Avoid duplicate cycles
+            const cycleKey = cycle.map(c => c.name).sort().join('->');
+            if (!cycles.some(existing =>
+              existing.map(c => c.name).sort().join('->') === cycleKey
+            )) {
+              cycles.push(cycle);
+            }
+          }
+        }
+      }
+
+      recursionStack.delete(className);
+    };
+
+    for (const className of graph.keys()) {
+      if (!visited.has(className)) {
+        dfs(className, []);
+      }
+    }
+
+    return cycles;
   }
 }

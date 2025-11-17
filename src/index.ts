@@ -21,8 +21,17 @@ export { ClassesThat } from './lang/syntax/ClassesThat';
 export { ClassesShould } from './lang/syntax/ClassesShould';
 
 // Library (predefined patterns)
-export { Architectures } from './library/Architectures';
+export {
+  Architectures,
+  CleanArchitecture,
+  DDDArchitecture,
+  cleanArchitecture,
+  dddArchitecture
+} from './library/Architectures';
 export { LayeredArchitecture, layeredArchitecture } from './library/LayeredArchitecture';
+
+// Cache
+export { CacheManager, getGlobalCache, resetGlobalCache } from './cache/CacheManager';
 
 // Convenience exports for common patterns
 export const { classes, noClasses, allClasses } = ArchRuleDefinition;
