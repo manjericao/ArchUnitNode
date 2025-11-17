@@ -61,6 +61,7 @@ ArchUnit-TS helps you maintain clean architecture in your TypeScript and JavaScr
 - ✅ **Report generation** (HTML, JSON, JUnit XML, Markdown)
 - ✅ **CLI tool** for command-line usage
 - ✅ **Watch mode** for automatic re-checking on file changes
+- ✅ **Severity levels** (errors vs warnings) for flexible enforcement
 - ✅ **TypeScript & JavaScript** support
 - ✅ **Integration with Jest** and other test frameworks
 - ✅ **Zero runtime dependencies** in production
@@ -180,6 +181,40 @@ const domainRule = ArchRuleDefinition.classes()
   .notDependOnClassesThat()
   .resideInPackage('infrastructure');
 ```
+
+### Severity Levels
+
+Control whether violations fail the build (errors) or just warn (warnings):
+
+```typescript
+import { ArchRuleDefinition } from 'archunit-ts';
+
+// ERROR: Will fail the build (default)
+const strictRule = ArchRuleDefinition.classes()
+  .that()
+  .resideInPackage('services')
+  .should()
+  .haveSimpleNameEndingWith('Service');
+
+// WARNING: Won't fail the build, but will show in output
+const lenientRule = ArchRuleDefinition.classes()
+  .that()
+  .resideInPackage('legacy')
+  .should()
+  .haveSimpleNameEndingWith('Service')
+  .asWarning();
+
+// Progressive enforcement: Start with warnings, promote to errors later
+const phase1Rule = someRule.asWarning(); // Phase 1: Team addresses issues
+const phase2Rule = someRule.asError(); // Phase 2: Enforce strictly
+```
+
+Use cases:
+
+- **Gradual adoption**: Mark legacy code violations as warnings
+- **Soft launches**: Introduce new rules as warnings first
+- **Non-blocking checks**: Informational rules that shouldn't fail builds
+- **Progressive enforcement**: Start lenient, get stricter over time
 
 ## API Documentation
 

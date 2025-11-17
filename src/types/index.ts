@@ -108,11 +108,20 @@ export interface Dependency {
   location: SourceLocation;
 }
 
+/**
+ * Severity levels for architecture violations
+ */
+export enum Severity {
+  ERROR = 'error',
+  WARNING = 'warning',
+}
+
 export interface ArchitectureViolation {
   message: string;
   filePath: string;
   location?: SourceLocation;
   rule: string;
+  severity: Severity;
 }
 
 export type PredicateFunction<T> = (item: T) => boolean;

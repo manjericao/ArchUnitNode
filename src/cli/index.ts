@@ -5,7 +5,7 @@
  */
 
 import * as path from 'path';
-import { createArchUnit, createReportManager, ReportFormat } from '../index';
+import { createArchUnit, createReportManager, ReportFormat, Severity } from '../index';
 import { createDefaultConfig, loadConfig } from '../config/ConfigLoader';
 import { formatViolations, formatSummary } from '../utils/ViolationFormatter';
 import { WatchMode } from './WatchMode';
@@ -188,8 +188,21 @@ async function runCheck(options: CLIOptions): Promise<void> {
       await generateReport(violations, options);
     }
 
-    // Exit with error code if there are violations
-    if (violations.length > 0) {
+    // Separate errors from warnings
+    const errors = violations.filter((v) => v.severity === Severity.ERROR);
+    const warnings = violations.filter((v) => v.severity === Severity.WARNING);
+
+    // Show severity summary
+    if (warnings.length > 0 && errors.length === 0) {
+      const warningColor = options.noColor ? '' : '\x1b[33m';
+      const resetColor = options.noColor ? '' : '\x1b[0m';
+      console.log(
+        `\n${warningColor}⚠${resetColor} Found ${warnings.length} warning(s), but no errors. Build continues.`
+      );
+    }
+
+    // Exit with error code only if there are errors
+    if (errors.length > 0) {
       process.exit(1);
     }
   } catch (error) {

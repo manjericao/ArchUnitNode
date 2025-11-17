@@ -1,5 +1,5 @@
 import { TSClasses } from './TSClasses';
-import { ArchitectureViolation } from '../types';
+import { ArchitectureViolation, Severity } from '../types';
 
 /**
  * Interface for architecture rules
@@ -7,6 +7,9 @@ import { ArchitectureViolation } from '../types';
 export interface ArchRule {
   check(classes: TSClasses): ArchitectureViolation[];
   getDescription(): string;
+  asWarning(): ArchRule;
+  asError(): ArchRule;
+  getSeverity(): Severity;
 }
 
 /**
@@ -14,9 +17,11 @@ export interface ArchRule {
  */
 export abstract class BaseArchRule implements ArchRule {
   protected description: string;
+  protected severity: Severity;
 
-  constructor(description: string) {
+  constructor(description: string, severity: Severity = Severity.ERROR) {
     this.description = description;
+    this.severity = severity;
   }
 
   abstract check(classes: TSClasses): ArchitectureViolation[];
@@ -26,7 +31,30 @@ export abstract class BaseArchRule implements ArchRule {
   }
 
   /**
-   * Create a violation
+   * Set this rule to warning severity (won't fail build)
+   */
+  public asWarning(): ArchRule {
+    this.severity = Severity.WARNING;
+    return this;
+  }
+
+  /**
+   * Set this rule to error severity (will fail build)
+   */
+  public asError(): ArchRule {
+    this.severity = Severity.ERROR;
+    return this;
+  }
+
+  /**
+   * Get the severity level of this rule
+   */
+  public getSeverity(): Severity {
+    return this.severity;
+  }
+
+  /**
+   * Create a violation with the rule's severity
    */
   protected createViolation(
     message: string,
@@ -37,6 +65,7 @@ export abstract class BaseArchRule implements ArchRule {
       message,
       filePath,
       rule,
+      severity: this.severity,
     };
   }
 }
