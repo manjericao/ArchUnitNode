@@ -22,7 +22,7 @@ interface CacheEntry<T> {
 export class CacheManager {
   private astCache: Map<string, CacheEntry<TSModule>>;
   private moduleCache: Map<string, CacheEntry<TSClass[]>>;
-  private ruleCache: Map<string, CacheEntry<any>>;
+  private ruleCache: Map<string, CacheEntry<unknown>>;
   private maxCacheSize: number;
   private cacheTTL: number; // Time to live in milliseconds
 
@@ -124,7 +124,7 @@ export class CacheManager {
   /**
    * Tier 3: Get cached rule evaluation
    */
-  public getRuleEvaluation(ruleKey: string): any | null {
+  public getRuleEvaluation(ruleKey: string): unknown | null {
     const entry = this.ruleCache.get(ruleKey);
 
     if (!entry || !this.isValid(entry)) {
@@ -140,7 +140,7 @@ export class CacheManager {
   /**
    * Tier 3: Cache rule evaluation
    */
-  public setRuleEvaluation(ruleKey: string, result: any): void {
+  public setRuleEvaluation(ruleKey: string, result: unknown): void {
     this.ruleCache.set(ruleKey, {
       data: result,
       hash: this.hashString(ruleKey),
@@ -192,7 +192,11 @@ export class CacheManager {
   /**
    * Get cache statistics
    */
-  public getStats() {
+  public getStats(): {
+    astCache: { size: number; hits: number; misses: number; hitRate: number };
+    moduleCache: { size: number; hits: number; misses: number; hitRate: number };
+    ruleCache: { size: number; hits: number; misses: number; hitRate: number };
+  } {
     return {
       astCache: {
         size: this.astCache.size,

@@ -5,7 +5,13 @@
  */
 
 import * as path from 'path';
-import { createArchUnit, createReportManager, ReportFormat, Severity } from '../index';
+import {
+  createArchUnit,
+  createReportManager,
+  ReportFormat,
+  Severity,
+  ArchitectureViolation,
+} from '../index';
 import { createDefaultConfig, loadConfig } from '../config/ConfigLoader';
 import { formatViolations, formatSummary } from '../utils/ViolationFormatter';
 import { WatchMode } from './WatchMode';
@@ -263,7 +269,10 @@ async function runCheck(options: CLIOptions): Promise<void> {
 /**
  * Generate report from violations
  */
-async function generateReport(violations: any[], options: CLIOptions): Promise<void> {
+async function generateReport(
+  violations: ArchitectureViolation[],
+  options: CLIOptions
+): Promise<void> {
   const reportManager = createReportManager();
   const formatMap: Record<string, ReportFormat> = {
     html: ReportFormat.HTML,

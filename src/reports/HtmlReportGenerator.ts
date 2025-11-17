@@ -1,4 +1,4 @@
-import { ReportGenerator, ReportData, ReportOptions } from './types';
+import { ReportGenerator, ReportData, ReportOptions, ReportMetadata } from './types';
 import { ArchitectureViolation } from '../types';
 
 /**
@@ -45,7 +45,7 @@ export class HtmlReportGenerator implements ReportGenerator {
     return '.html';
   }
 
-  private generateStats(metadata: any): string {
+  private generateStats(metadata: ReportMetadata): string {
     return `
         <div class="stats">
             <div class="stat-card">

@@ -314,7 +314,11 @@ export class CodeAnalyzer {
   /**
    * Get cache statistics
    */
-  public getCacheStats() {
+  public getCacheStats(): {
+    astCache: { size: number; hits: number; misses: number; hitRate: number };
+    moduleCache: { size: number; hits: number; misses: number; hitRate: number };
+    ruleCache: { size: number; hits: number; misses: number; hitRate: number };
+  } {
     return this.cache.getStats();
   }
 
