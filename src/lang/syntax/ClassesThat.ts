@@ -11,25 +11,40 @@ export class ClassesThat {
   protected tsClasses: TSClasses;
   protected predicates: PredicateFunction[];
   protected operator: 'AND' | 'OR';
+  protected negateNext: boolean;
 
-  constructor(classes: TSClasses, predicates: PredicateFunction[] = [], operator: 'AND' | 'OR' = 'AND') {
+  constructor(
+    classes: TSClasses,
+    predicates: PredicateFunction[] = [],
+    operator: 'AND' | 'OR' = 'AND',
+    negateNext: boolean = false
+  ) {
     this.tsClasses = classes;
     this.predicates = predicates;
     this.operator = operator;
+    this.negateNext = negateNext;
+  }
+
+  /**
+   * Negate the next condition
+   * Example: classes().that().not().resideInPackage('test')
+   */
+  public not(): ClassesThat {
+    return new ClassesThat(this.tsClasses, this.predicates, this.operator, true);
   }
 
   /**
    * Combine conditions with OR operator
    */
   public or(): ClassesThat {
-    return new ClassesThat(this.tsClasses, this.predicates, 'OR');
+    return new ClassesThat(this.tsClasses, this.predicates, 'OR', false);
   }
 
   /**
    * Combine conditions with AND operator (default)
    */
   public and(): ClassesThat {
-    return new ClassesThat(this.tsClasses, this.predicates, 'AND');
+    return new ClassesThat(this.tsClasses, this.predicates, 'AND', false);
   }
 
   /**
@@ -43,12 +58,12 @@ export class ClassesThat {
     if (this.operator === 'OR') {
       // OR: class matches if ANY predicate is true
       return this.tsClasses.that((cls) => {
-        return this.predicates.some(predicate => predicate(cls));
+        return this.predicates.some((predicate) => predicate(cls));
       });
     } else {
       // AND: class matches if ALL predicates are true
       return this.tsClasses.that((cls) => {
-        return this.predicates.every(predicate => predicate(cls));
+        return this.predicates.every((predicate) => predicate(cls));
       });
     }
   }
@@ -62,10 +77,18 @@ export class ClassesThat {
   }
 
   /**
+   * Helper to apply negation if needed
+   */
+  private applyNegation(predicate: PredicateFunction): PredicateFunction {
+    return this.negateNext ? (cls: TSClass): boolean => !predicate(cls) : predicate;
+  }
+
+  /**
    * Filter classes that reside in a specific package
    */
   public resideInPackage(packagePattern: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => cls.residesInPackage(packagePattern)];
+    const predicate = this.applyNegation((cls: TSClass) => cls.residesInPackage(packagePattern));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -73,7 +96,8 @@ export class ClassesThat {
    * Filter classes that reside outside a specific package
    */
   public resideOutsideOfPackage(packagePattern: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => !cls.residesInPackage(packagePattern)];
+    const predicate = this.applyNegation((cls: TSClass) => !cls.residesInPackage(packagePattern));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -81,7 +105,8 @@ export class ClassesThat {
    * Filter classes with a specific decorator/annotation
    */
   public areAnnotatedWith(decoratorName: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => cls.isAnnotatedWith(decoratorName)];
+    const predicate = this.applyNegation((cls: TSClass) => cls.isAnnotatedWith(decoratorName));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -89,7 +114,8 @@ export class ClassesThat {
    * Filter classes that are NOT annotated with a decorator
    */
   public areNotAnnotatedWith(decoratorName: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => !cls.isAnnotatedWith(decoratorName)];
+    const predicate = this.applyNegation((cls: TSClass) => !cls.isAnnotatedWith(decoratorName));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -97,7 +123,8 @@ export class ClassesThat {
    * Filter classes with names matching a pattern
    */
   public haveSimpleNameMatching(pattern: RegExp | string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => cls.hasSimpleNameMatching(pattern)];
+    const predicate = this.applyNegation((cls: TSClass) => cls.hasSimpleNameMatching(pattern));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -105,7 +132,8 @@ export class ClassesThat {
    * Filter classes with names ending with a suffix
    */
   public haveSimpleNameEndingWith(suffix: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => cls.hasSimpleNameEndingWith(suffix)];
+    const predicate = this.applyNegation((cls: TSClass) => cls.hasSimpleNameEndingWith(suffix));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -113,7 +141,8 @@ export class ClassesThat {
    * Filter classes with names starting with a prefix
    */
   public haveSimpleNameStartingWith(prefix: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => cls.hasSimpleNameStartingWith(prefix)];
+    const predicate = this.applyNegation((cls: TSClass) => cls.hasSimpleNameStartingWith(prefix));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -121,7 +150,8 @@ export class ClassesThat {
    * Filter classes that implement or extend a specific type
    */
   public areAssignableTo(className: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => cls.isAssignableTo(className)];
+    const predicate = this.applyNegation((cls: TSClass) => cls.isAssignableTo(className));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -129,7 +159,8 @@ export class ClassesThat {
    * Filter classes that implement a specific interface
    */
   public implement(interfaceName: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => cls.implements.includes(interfaceName)];
+    const predicate = this.applyNegation((cls: TSClass) => cls.implements.includes(interfaceName));
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 
@@ -137,7 +168,8 @@ export class ClassesThat {
    * Filter classes that extend a specific class
    */
   public extend(className: string): ClassesThatShould {
-    const newPredicates = [...this.predicates, (cls: TSClass) => cls.extends === className];
+    const predicate = this.applyNegation((cls: TSClass) => cls.extends === className);
+    const newPredicates = [...this.predicates, predicate];
     return new ClassesThatShould(this.tsClasses, newPredicates, this.operator);
   }
 }

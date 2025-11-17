@@ -8,6 +8,13 @@ export { TSClass } from './core/TSClass';
 export { TSClasses } from './core/TSClasses';
 export { ArchRule, BaseArchRule } from './core/ArchRule';
 
+// Import types for internal use
+import { TSClasses } from './core/TSClasses';
+import { ArchRule } from './core/ArchRule';
+import { CodeAnalyzer } from './analyzer/CodeAnalyzer';
+import { ArchRuleDefinition, StaticArchRule } from './lang/ArchRuleDefinition';
+import { ArchitectureViolation } from './types';
+
 // Types
 export * from './types';
 
@@ -16,7 +23,7 @@ export { TypeScriptParser } from './parser/TypeScriptParser';
 export { CodeAnalyzer } from './analyzer/CodeAnalyzer';
 
 // Fluent API
-export { ArchRuleDefinition } from './lang/ArchRuleDefinition';
+export { ArchRuleDefinition, StaticArchRule } from './lang/ArchRuleDefinition';
 export { ClassesThat } from './lang/syntax/ClassesThat';
 export { ClassesShould } from './lang/syntax/ClassesShould';
 
@@ -25,13 +32,32 @@ export {
   Architectures,
   CleanArchitecture,
   DDDArchitecture,
+  MicroservicesArchitecture,
   cleanArchitecture,
-  dddArchitecture
+  dddArchitecture,
+  microservicesArchitecture,
 } from './library/Architectures';
 export { LayeredArchitecture, layeredArchitecture } from './library/LayeredArchitecture';
 
 // Cache
 export { CacheManager, getGlobalCache, resetGlobalCache } from './cache/CacheManager';
+
+// Configuration
+export {
+  ConfigLoader,
+  loadConfig,
+  createDefaultConfig,
+  ArchUnitConfig,
+} from './config/ConfigLoader';
+
+// Utilities
+export {
+  ViolationFormatter,
+  formatViolations,
+  formatViolation,
+  formatSummary,
+  FormatOptions,
+} from './utils/ViolationFormatter';
 
 // Convenience exports for common patterns
 export const { classes, noClasses, allClasses } = ArchRuleDefinition;
@@ -49,10 +75,7 @@ export class ArchUnitTS {
   /**
    * Analyze code in a directory
    */
-  public async analyzeCode(
-    basePath: string,
-    patterns?: string[]
-  ): Promise<TSClasses> {
+  public async analyzeCode(basePath: string, patterns?: string[]): Promise<TSClasses> {
     return this.analyzer.analyze(basePath, patterns);
   }
 
@@ -68,9 +91,9 @@ export class ArchUnitTS {
    */
   public async checkRule(
     basePath: string,
-    rule: ArchRule | import('./lang/ArchRuleDefinition').StaticArchRule,
+    rule: ArchRule | StaticArchRule,
     patterns?: string[]
-  ): Promise<import('./types').ArchitectureViolation[]> {
+  ): Promise<ArchitectureViolation[]> {
     const classes = await this.analyzeCode(basePath, patterns);
     return rule.check(classes);
   }
@@ -80,11 +103,11 @@ export class ArchUnitTS {
    */
   public async checkRules(
     basePath: string,
-    rules: Array<ArchRule | import('./lang/ArchRuleDefinition').StaticArchRule>,
+    rules: Array<ArchRule | StaticArchRule>,
     patterns?: string[]
-  ): Promise<import('./types').ArchitectureViolation[]> {
+  ): Promise<ArchitectureViolation[]> {
     const classes = await this.analyzeCode(basePath, patterns);
-    const allViolations: import('./types').ArchitectureViolation[] = [];
+    const allViolations: ArchitectureViolation[] = [];
 
     for (const rule of rules) {
       const violations = rule.check(classes);
@@ -97,15 +120,38 @@ export class ArchUnitTS {
   /**
    * Assert that there are no violations (throws if there are)
    */
-  public static assertNoViolations(
-    violations: import('./types').ArchitectureViolation[]
-  ): void {
+  public static assertNoViolations(violations: ArchitectureViolation[]): void {
     if (violations.length > 0) {
       const messages = violations.map((v) => `  - ${v.message} (${v.filePath})`);
       throw new Error(
         `Architecture violations found:\n${messages.join('\n')}\n\nTotal: ${violations.length} violation(s)`
       );
     }
+  }
+
+  /**
+   * Check rules from a configuration file
+   */
+  public async checkConfig(configPath?: string): Promise<ArchitectureViolation[]> {
+    const { loadConfig } = await import('./config/ConfigLoader');
+    const config = await loadConfig(configPath);
+
+    const basePath = config.basePath || process.cwd();
+    const patterns = config.patterns;
+
+    const violations = await this.checkRules(basePath, config.rules, patterns);
+
+    // Call custom violation handler if provided
+    if (config.onViolation) {
+      config.onViolation(violations);
+    }
+
+    // Throw if failOnViolation is true
+    if (config.failOnViolation && violations.length > 0) {
+      ArchUnitTS.assertNoViolations(violations);
+    }
+
+    return violations;
   }
 }
 

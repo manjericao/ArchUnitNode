@@ -31,6 +31,13 @@ export class Architectures {
   public static dddArchitecture(): DDDArchitecture {
     return new DDDArchitecture();
   }
+
+  /**
+   * Create a microservices architecture pattern
+   */
+  public static microservicesArchitecture(): MicroservicesArchitecture {
+    return new MicroservicesArchitecture();
+  }
 }
 
 /**
@@ -51,7 +58,7 @@ export class OnionArchitecture {
     return this;
   }
 
-  public adapter(...adapterName: string): AdapterBuilder {
+  public adapter(..._adapterName: string[]): AdapterBuilder {
     return new AdapterBuilder(this);
   }
 
@@ -90,7 +97,7 @@ export class OnionArchitecture {
 export class AdapterBuilder {
   constructor(private architecture: OnionArchitecture) {}
 
-  public definedBy(...packages: string[]): OnionArchitecture {
+  public definedBy(..._packages: string[]): OnionArchitecture {
     return this.architecture;
   }
 }
@@ -180,8 +187,10 @@ export class CleanArchitecture {
     // Clean Architecture dependency rules
     // Entities should not depend on anything
     if (this.entitiesLayer) {
-      const layers = ['UseCases', 'Controllers', 'Presenters', 'Gateways'].filter(l => {
-        return this.useCasesLayer || this.controllersLayer || this.presentersLayer || this.gatewaysLayer;
+      const layers = ['UseCases', 'Controllers', 'Presenters', 'Gateways'].filter((_l) => {
+        return (
+          this.useCasesLayer || this.controllersLayer || this.presentersLayer || this.gatewaysLayer
+        );
       });
       if (layers.length > 0) {
         arch.whereLayer('Entities').mayNotAccessLayers(...layers);
@@ -195,7 +204,7 @@ export class CleanArchitecture {
 
     // Controllers may depend on use cases and entities
     if (this.controllersLayer) {
-      const allowed = [];
+      const allowed: string[] = [];
       if (this.useCasesLayer) allowed.push('UseCases');
       if (this.entitiesLayer) allowed.push('Entities');
       if (allowed.length > 0) {
@@ -205,7 +214,7 @@ export class CleanArchitecture {
 
     // Presenters may depend on use cases and entities
     if (this.presentersLayer) {
-      const allowed = [];
+      const allowed: string[] = [];
       if (this.useCasesLayer) allowed.push('UseCases');
       if (this.entitiesLayer) allowed.push('Entities');
       if (allowed.length > 0) {
@@ -215,7 +224,7 @@ export class CleanArchitecture {
 
     // Gateways may depend on use cases and entities
     if (this.gatewaysLayer) {
-      const allowed = [];
+      const allowed: string[] = [];
       if (this.useCasesLayer) allowed.push('UseCases');
       if (this.entitiesLayer) allowed.push('Entities');
       if (allowed.length > 0) {
@@ -340,7 +349,7 @@ export class DDDArchitecture {
     // DDD dependency rules
     // Value objects should not depend on entities or aggregates
     if (this.valueObjectsLayer) {
-      const forbidden = [];
+      const forbidden: string[] = [];
       if (this.entitiesLayer) forbidden.push('Entities');
       if (this.aggregatesLayer) forbidden.push('Aggregates');
       if (forbidden.length > 0) {
@@ -360,7 +369,7 @@ export class DDDArchitecture {
 
     // Application services may orchestrate domain objects
     if (this.applicationServicesLayer) {
-      const allowed = [];
+      const allowed: string[] = [];
       if (this.aggregatesLayer) allowed.push('Aggregates');
       if (this.entitiesLayer) allowed.push('Entities');
       if (this.valueObjectsLayer) allowed.push('ValueObjects');
@@ -377,6 +386,93 @@ export class DDDArchitecture {
 }
 
 /**
+ * Microservices Architecture pattern support
+ *
+ * Ensures:
+ * - Services are isolated and don't depend on each other directly
+ * - All services can access shared kernel
+ * - Optional API gateway for external access
+ */
+export class MicroservicesArchitecture {
+  private services: Map<string, string[]> = new Map();
+  private sharedKernelPackages?: string[];
+  private apiGatewayPackages?: string[];
+
+  /**
+   * Define a microservice
+   */
+  public service(serviceName: string, ...packages: string[]): this {
+    this.services.set(serviceName, packages);
+    return this;
+  }
+
+  /**
+   * Define shared kernel (code that all services can access)
+   */
+  public sharedKernel(...packages: string[]): this {
+    this.sharedKernelPackages = packages;
+    return this;
+  }
+
+  /**
+   * Define API gateway (optional)
+   */
+  public apiGateway(...packages: string[]): this {
+    this.apiGatewayPackages = packages;
+    return this;
+  }
+
+  /**
+   * Convert to layered architecture for rule checking
+   */
+  public toLayeredArchitecture(): LayeredArchitecture {
+    const arch = layeredArchitecture();
+
+    // Add shared kernel as a base layer
+    if (this.sharedKernelPackages) {
+      arch.layer('SharedKernel').definedBy(...this.sharedKernelPackages);
+    }
+
+    // Add each service as a layer
+    for (const [serviceName, packages] of this.services) {
+      arch.layer(serviceName).definedBy(...packages);
+    }
+
+    // Add API gateway if defined
+    if (this.apiGatewayPackages) {
+      arch.layer('ApiGateway').definedBy(...this.apiGatewayPackages);
+    }
+
+    // Enforce microservices rules:
+    // 1. Services can only access shared kernel (not other services)
+    for (const [serviceName] of this.services) {
+      if (this.sharedKernelPackages) {
+        arch.whereLayer(serviceName).mayOnlyAccessLayers('SharedKernel');
+      }
+    }
+
+    // 2. API gateway can access all services and shared kernel
+    if (this.apiGatewayPackages) {
+      const allowedLayers = ['SharedKernel', ...Array.from(this.services.keys())];
+      arch.whereLayer('ApiGateway').mayOnlyAccessLayers(...allowedLayers);
+    }
+
+    // 3. Shared kernel should not depend on services or gateway
+    if (this.sharedKernelPackages) {
+      const forbiddenLayers = [...Array.from(this.services.keys())];
+      if (this.apiGatewayPackages) {
+        forbiddenLayers.push('ApiGateway');
+      }
+      if (forbiddenLayers.length > 0) {
+        arch.whereLayer('SharedKernel').mayNotAccessLayers(...forbiddenLayers);
+      }
+    }
+
+    return arch;
+  }
+}
+
+/**
  * Convenience exports
  */
 export function cleanArchitecture(): CleanArchitecture {
@@ -385,4 +481,8 @@ export function cleanArchitecture(): CleanArchitecture {
 
 export function dddArchitecture(): DDDArchitecture {
   return new DDDArchitecture();
+}
+
+export function microservicesArchitecture(): MicroservicesArchitecture {
+  return new MicroservicesArchitecture();
 }

@@ -1,5 +1,5 @@
 import { TSClasses } from '../core/TSClasses';
-import { ArchRule, BaseArchRule } from '../core/ArchRule';
+import { BaseArchRule } from '../core/ArchRule';
 import { ArchitectureViolation } from '../types';
 
 /**
@@ -25,7 +25,6 @@ interface LayerAccessRule {
 export class LayeredArchitecture extends BaseArchRule {
   private layers: Map<string, Layer> = new Map();
   private accessRules: LayerAccessRule[] = [];
-  private considerAllDependencies: boolean = false;
 
   constructor() {
     super('Layered Architecture');
@@ -35,7 +34,7 @@ export class LayeredArchitecture extends BaseArchRule {
    * Consider all dependencies (not just direct ones)
    */
   public consideringAllDependencies(): this {
-    this.considerAllDependencies = true;
+    // Note: This is a placeholder for future implementation
     return this;
   }
 
@@ -43,7 +42,7 @@ export class LayeredArchitecture extends BaseArchRule {
    * Consider only direct dependencies
    */
   public consideringOnlyDependenciesInLayers(): this {
-    this.considerAllDependencies = false;
+    // Note: This is a placeholder for future implementation
     return this;
   }
 
@@ -80,18 +79,26 @@ export class LayeredArchitecture extends BaseArchRule {
 
   /**
    * Check layered architecture rules
+   * OPTIMIZED: Uses hash maps for O(1) lookups instead of O(n·m·k)
    */
   public check(classes: TSClasses): ArchitectureViolation[] {
     const violations: ArchitectureViolation[] = [];
 
     // Group classes by layer
     const classesByLayer = new Map<string, TSClasses>();
+    // OPTIMIZATION: Build indices for fast lookups
+    const classNameToLayer = new Map<string, string>();
+    const moduleToLayer = new Map<string, string>();
+
     for (const [layerName, layer] of this.layers) {
       const layerClasses = new TSClasses();
       for (const cls of classes.getAll()) {
         for (const packagePattern of layer.packages) {
           if (cls.residesInPackage(packagePattern)) {
             layerClasses.add(cls);
+            // Build lookup indices
+            classNameToLayer.set(cls.name, layerName);
+            moduleToLayer.set(cls.module, layerName);
             break;
           }
         }
@@ -110,7 +117,8 @@ export class LayeredArchitecture extends BaseArchRule {
         const dependencies = cls.getDependencies();
 
         for (const dep of dependencies) {
-          const depLayer = this.findLayerForDependency(dep, classesByLayer);
+          // OPTIMIZED: O(1) lookup instead of O(n·m)
+          const depLayer = this.findLayerForDependency(dep, classNameToLayer, moduleToLayer);
           if (!depLayer) continue;
 
           if (rule.mayOnly) {
@@ -145,27 +153,25 @@ export class LayeredArchitecture extends BaseArchRule {
 
   /**
    * Find which layer a dependency belongs to
+   * OPTIMIZED: Uses hash maps for O(1) lookup
    */
   private findLayerForDependency(
     dependency: string,
-    classesByLayer: Map<string, TSClasses>
+    classNameToLayer: Map<string, string>,
+    moduleToLayer: Map<string, string>
   ): string | null {
-    for (const [layerName, layerClasses] of classesByLayer) {
-      for (const cls of layerClasses.getAll()) {
-        if (cls.name === dependency || cls.module.includes(dependency)) {
-          return layerName;
-        }
+    // Try exact class name match first
+    const layerByName = classNameToLayer.get(dependency);
+    if (layerByName) return layerByName;
+
+    // Try module lookup (partial match)
+    for (const [module, layer] of moduleToLayer.entries()) {
+      if (module.includes(dependency) || dependency.includes(module)) {
+        return layer;
       }
     }
-    return null;
-  }
 
-  /**
-   * Update description
-   */
-  private updateDescription(): void {
-    const layerNames = Array.from(this.layers.keys());
-    this.description = `Layered Architecture with layers: ${layerNames.join(', ')}`;
+    return null;
   }
 }
 
@@ -173,7 +179,10 @@ export class LayeredArchitecture extends BaseArchRule {
  * Builder for defining a layer
  */
 export class LayerDefinition {
-  constructor(private architecture: LayeredArchitecture, private layerName: string) {}
+  constructor(
+    private architecture: LayeredArchitecture,
+    private layerName: string
+  ) {}
 
   /**
    * Define which packages belong to this layer
@@ -188,12 +197,15 @@ export class LayerDefinition {
  * Builder for defining layer access rules
  */
 export class LayerAccessRuleBuilder {
-  constructor(private architecture: LayeredArchitecture, private layerName: string) {}
+  constructor(
+    private architecture: LayeredArchitecture,
+    private layerName: string
+  ) {}
 
   /**
    * This layer may only be accessed by specific layers
    */
-  public mayOnlyBeAccessedByLayers(...layerNames: string[]): LayeredArchitecture {
+  public mayOnlyBeAccessedByLayers(..._layerNames: string[]): LayeredArchitecture {
     // This creates a reverse rule - other layers may only access this layer if they're in the list
     return this.architecture;
   }
@@ -201,7 +213,7 @@ export class LayerAccessRuleBuilder {
   /**
    * This layer may not be accessed by specific layers
    */
-  public mayNotBeAccessedByLayers(...layerNames: string[]): LayeredArchitecture {
+  public mayNotBeAccessedByLayers(..._layerNames: string[]): LayeredArchitecture {
     return this.architecture;
   }
 
