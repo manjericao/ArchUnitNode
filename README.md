@@ -60,6 +60,7 @@ ArchUnit-TS helps you maintain clean architecture in your TypeScript and JavaScr
 - ✅ **Custom predicates** for flexible class filtering
 - ✅ **Report generation** (HTML, JSON, JUnit XML, Markdown)
 - ✅ **CLI tool** for command-line usage
+- ✅ **Watch mode** for automatic re-checking on file changes
 - ✅ **TypeScript & JavaScript** support
 - ✅ **Integration with Jest** and other test frameworks
 - ✅ **Zero runtime dependencies** in production
@@ -381,12 +382,42 @@ npx archunit-ts check ./src --format markdown --output reports/architecture.md
 npx archunit-ts check ./src --format html --output report.html --report-title "My Project Architecture"
 ```
 
+### Watch Mode
+
+Enable automatic architecture checks when files change:
+
+```bash
+# Start watch mode
+npx archunit-ts watch
+
+# Watch with custom config
+npx archunit-ts watch --config custom.config.js
+
+# Watch specific patterns
+npx archunit-ts watch --pattern "src/**/*.ts"
+
+# Watch with verbose output
+npx archunit-ts watch --verbose
+```
+
+Watch mode features:
+
+- Automatic re-checking on file changes
+- Debounced execution (300ms default)
+- Clear console output with timestamps
+- Shows which files changed
+- Graceful shutdown with Ctrl+C
+- Ignores node_modules, dist, build, and .d.ts files
+
 ### CLI Options
 
 - `--rules <path>` - Path to rules configuration file
 - `--format <format>` - Report format: html, json, junit, or markdown
 - `--output <path>` - Output path for report
 - `--report-title <title>` - Custom title for the report
+- `--no-color` - Disable colored output
+- `--no-context` - Disable code context in violations
+- `--verbose, -v` - Show verbose output
 - `--help` - Show help
 - `--version` - Show version
 

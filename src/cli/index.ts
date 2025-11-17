@@ -6,8 +6,9 @@
 
 import * as path from 'path';
 import { createArchUnit, createReportManager, ReportFormat } from '../index';
-import { createDefaultConfig } from '../config/ConfigLoader';
+import { createDefaultConfig, loadConfig } from '../config/ConfigLoader';
 import { formatViolations, formatSummary } from '../utils/ViolationFormatter';
+import { WatchMode } from './WatchMode';
 
 interface CLIOptions {
   config?: string;
@@ -103,6 +104,7 @@ Usage:
 Commands:
   check        Check architecture rules from config file
   validate     Alias for 'check'
+  watch        Watch files and run checks on changes
   init         Create a default configuration file
   help         Show this help message
 
@@ -142,6 +144,12 @@ Examples:
 
   # Check with custom patterns
   archunit check --pattern "src/**/*.ts" --pattern "lib/**/*.ts"
+
+  # Watch for file changes (automatic re-check)
+  archunit watch
+
+  # Watch with custom config
+  archunit watch --config ./custom-archunit.config.js
 `);
 }
 
@@ -237,6 +245,51 @@ async function generateReport(violations: any[], options: CLIOptions): Promise<v
 }
 
 /**
+ * Run the watch command
+ */
+async function runWatch(options: CLIOptions): Promise<void> {
+  try {
+    if (options.verbose) {
+      console.log('Loading configuration...');
+    }
+
+    // Load config
+    const config = await loadConfig(options.config);
+    const basePath = options.basePath || process.cwd();
+
+    // Create and start watch mode
+    const watchMode = new WatchMode({
+      basePath,
+      config,
+      patterns: options.patterns,
+      noColor: options.noColor,
+      noContext: options.noContext,
+      verbose: options.verbose,
+    });
+
+    // Handle graceful shutdown
+    process.on('SIGINT', async () => {
+      await watchMode.stop();
+      process.exit(0);
+    });
+
+    process.on('SIGTERM', async () => {
+      await watchMode.stop();
+      process.exit(0);
+    });
+
+    // Start watching
+    await watchMode.start();
+  } catch (error) {
+    console.error('Error:', error instanceof Error ? error.message : String(error));
+    if (options.verbose && error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
+}
+
+/**
  * Run the init command
  */
 async function runInit(options: CLIOptions): Promise<void> {
@@ -264,6 +317,9 @@ async function main(): Promise<void> {
     case 'check':
     case 'validate':
       await runCheck(options);
+      break;
+    case 'watch':
+      await runWatch(options);
       break;
     case 'init':
       await runInit(options);
