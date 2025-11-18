@@ -70,17 +70,11 @@ export {
   type ArchitecturalMetricsResult,
 } from './metrics';
 
-// Library (predefined patterns)
-export {
-  Architectures,
-  CleanArchitecture,
-  DDDArchitecture,
-  MicroservicesArchitecture,
-  cleanArchitecture,
-  dddArchitecture,
-  microservicesArchitecture,
-} from './library/Architectures';
-export { LayeredArchitecture, layeredArchitecture } from './library/LayeredArchitecture';
+// Library (architectural patterns)
+export * from './library';
+
+// Testing Utilities
+export * from './testing';
 
 // Cache
 export {
