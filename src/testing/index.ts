@@ -24,3 +24,15 @@ export {
   createTestSuite,
   testRule,
 } from './TestSuiteBuilder';
+
+// Test Fixtures and Generators
+export {
+  TSClassBuilder,
+  TSClassesBuilder,
+  ViolationBuilder,
+  createClass,
+  createClasses,
+  createViolation,
+  Fixtures,
+  Generator,
+} from './TestFixtures';

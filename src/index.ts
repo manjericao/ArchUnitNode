@@ -126,6 +126,28 @@ export {
   type FrameworkDetectionResult,
 } from './framework';
 
+// Architecture Timeline
+export {
+  ArchitectureTimeline,
+  createTimeline,
+  TimelineConfig,
+  TimelineSnapshot,
+  TimelineReport,
+  TimelineVisualizer,
+  TimelineVisualizationOptions,
+} from './timeline';
+
+// Metrics Dashboard
+export {
+  MetricsDashboard,
+  DashboardConfig,
+  DashboardData,
+  HistoricalMetrics,
+} from './dashboard';
+
+// Rule Templates
+export { RuleTemplates } from './templates';
+
 // Convenience exports for common patterns
 export const { classes, noClasses, allClasses } = ArchRuleDefinition;
 

@@ -4,6 +4,7 @@
 
 export {
   ArchitecturalMetricsAnalyzer,
+  ArchitecturalMetricsAnalyzer as ArchitecturalMetrics, // Alias for convenience
   type CouplingMetrics,
   type CohesionMetrics,
   type ComplexityMetrics,
