@@ -7,12 +7,11 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as fs from 'fs';
-import * as path from 'path';
 import { createArchUnit } from '../index';
 import { loadConfig } from '../config/ConfigLoader';
 import { createReportManager } from '../reports/ReportManager';
 import { MetricsDashboard } from '../dashboard/MetricsDashboard';
-import { ArchitecturalMetrics } from '../metrics/ArchitecturalMetrics';
+import { ArchitecturalMetrics } from '../metrics';
 
 /**
  * Main action function
@@ -39,17 +38,16 @@ async function run(): Promise<void> {
     core.info(`Patterns: ${patterns.join(', ')}`);
 
     // Load configuration
-    let config;
-    let rules;
+    let config: any;
+    let rules: any[] = [];
 
     if (fs.existsSync(configPath)) {
       core.info(`Loading configuration from ${configPath}`);
       config = await loadConfig(configPath);
-      rules = config.rules;
+      rules = config.rules || [];
     } else {
       core.warning(`Configuration file not found: ${configPath}`);
       core.info('Running with default rules');
-      rules = [];
     }
 
     // Create analyzer

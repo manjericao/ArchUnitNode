@@ -241,6 +241,30 @@ export class ClassesThatStatic {
   }
 
   /**
+   * Filter classes that are interfaces
+   */
+  public areInterfaces(): ClassesShouldStatic {
+    this.filters.push((classes) => classes.that((cls) => cls.isInterface));
+    return new ClassesShouldStatic(this.filters, this.negated);
+  }
+
+  /**
+   * Filter classes that are abstract
+   */
+  public areAbstract(): ClassesShouldStatic {
+    this.filters.push((classes) => classes.that((cls) => cls.isAbstract));
+    return new ClassesShouldStatic(this.filters, this.negated);
+  }
+
+  /**
+   * Filter classes that reside outside a specific package
+   */
+  public resideOutsidePackage(packagePattern: string): ClassesShouldStatic {
+    this.filters.push((classes) => classes.that((cls) => !cls.residesInPackage(packagePattern)));
+    return new ClassesShouldStatic(this.filters, this.negated);
+  }
+
+  /**
    * Move to "should" phase for defining assertions
    * Allows using custom predicates directly with should()
    */
@@ -428,6 +452,13 @@ export class ClassesShouldStatic {
       },
       `Classes should reside in any package [${packagePatterns.join(', ')}]`
     );
+  }
+
+  /**
+   * Negate the next condition
+   */
+  public not(): ClassesShouldStatic {
+    return new ClassesShouldStatic(this.filters, !this.negated);
   }
 }
 
