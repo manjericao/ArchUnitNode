@@ -1,0 +1,58 @@
+name: Architecture Check
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master, develop]
+
+jobs:
+  architecture-check:
+    name: Check Architecture Rules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ArchUnitNode
+        uses: ./
+        id: archunit
+        with:
+          config-path: 'archunit.config.js'
+          base-path: '.'
+          patterns: 'src/**/*.ts,src/**/*.tsx'
+          fail-on-violations: 'true'
+          report-format: 'html'
+          report-output: 'archunit-report.html'
+          generate-dashboard: 'true'
+          dashboard-output: 'archunit-dashboard.html'
+          comment-pr: 'true'
+          max-violations: '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-reports
+          path: |
+            archunit-report.html
+            archunit-dashboard.html
+
+      - name: Display Results
+        if: always()
+        run: |
+          echo "Violations: ${{ steps.archunit.outputs.violations-count }}"
+          echo "Errors: ${{ steps.archunit.outputs.errors-count }}"
+          echo "Warnings: ${{ steps.archunit.outputs.warnings-count }}"
+          echo "Fitness Score: ${{ steps.archunit.outputs.fitness-score }}"

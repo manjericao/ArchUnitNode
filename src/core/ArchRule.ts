@@ -1,6 +1,9 @@
 import { TSClasses } from './TSClasses';
 import { ArchitectureViolation, Severity } from '../types';
 
+// Re-export types for convenience
+export { ArchitectureViolation, Severity };
+
 /**
  * Interface for architecture rules
  */

@@ -1,0 +1,78 @@
+name: 'ArchUnitNode Architecture Check'
+description: 'Check architecture rules in your TypeScript/JavaScript project'
+author: 'Manjericao Team'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  config-path:
+    description: 'Path to archunit configuration file'
+    required: false
+    default: 'archunit.config.js'
+
+  base-path:
+    description: 'Base path of the project to analyze'
+    required: false
+    default: '.'
+
+  patterns:
+    description: 'File patterns to analyze (comma-separated)'
+    required: false
+    default: 'src/**/*.ts,src/**/*.tsx,src/**/*.js,src/**/*.jsx'
+
+  fail-on-violations:
+    description: 'Fail the action if violations are found'
+    required: false
+    default: 'true'
+
+  report-format:
+    description: 'Report format (html, json, junit, markdown)'
+    required: false
+    default: 'html'
+
+  report-output:
+    description: 'Output path for the report'
+    required: false
+    default: 'archunit-report.html'
+
+  generate-dashboard:
+    description: 'Generate metrics dashboard'
+    required: false
+    default: 'false'
+
+  dashboard-output:
+    description: 'Output path for the dashboard'
+    required: false
+    default: 'archunit-dashboard.html'
+
+  comment-pr:
+    description: 'Comment violations on pull request'
+    required: false
+    default: 'false'
+
+  max-violations:
+    description: 'Maximum number of violations allowed (0 = fail on any violation)'
+    required: false
+    default: '0'
+
+outputs:
+  violations-count:
+    description: 'Total number of violations found'
+
+  errors-count:
+    description: 'Number of error-level violations'
+
+  warnings-count:
+    description: 'Number of warning-level violations'
+
+  fitness-score:
+    description: 'Architecture fitness score (0-100)'
+
+  report-path:
+    description: 'Path to the generated report'
+
+runs:
+  using: 'node20'
+  main: 'dist/action/index.js'
