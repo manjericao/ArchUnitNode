@@ -28,7 +28,6 @@ describe('CacheManager', () => {
           functions: [],
           imports: [],
           exports: [],
-          exports: [],
         };
 
         // Initial stats should be zero
@@ -105,6 +104,7 @@ describe('CacheManager', () => {
         fs.writeFileSync(tempFilePath, 'original content', 'utf-8');
 
         const tempModule: TSModule = {
+          name: 'TempModule',
           filePath: tempFilePath,
           classes: [],
           interfaces: [],
