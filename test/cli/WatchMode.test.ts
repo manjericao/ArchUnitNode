@@ -15,7 +15,6 @@ describe('WatchMode', () => {
     mockConfig = {
       rules: [],
       patterns: ['**/*.ts'],
-      exclude: ['node_modules'],
     };
   });
 

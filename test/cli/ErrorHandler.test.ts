@@ -1,35 +1,47 @@
-import { ErrorHandler } from '../../src/cli/ErrorHandler';
+import { ErrorHandler, ErrorType } from '../../src/cli/ErrorHandler';
 
 describe('ErrorHandler', () => {
   let handler: ErrorHandler;
 
   beforeEach(() => {
-    handler = new ErrorHandler();
+    handler = new ErrorHandler(false); // Disable colors for testing
   });
 
   it('should create error handler', () => {
     expect(handler).toBeDefined();
   });
 
-  it('should parse errors', () => {
-    const error = new Error('test.ts(10,5): error TS2304');
+  it('should parse configuration errors', () => {
+    const error = new Error('Cannot find module config');
     const parsed = handler.parseError(error);
 
-    expect(parsed.type).toBe('compilation');
+    expect(parsed.type).toBe(ErrorType.CONFIGURATION);
+    expect(parsed.suggestions.length).toBeGreaterThan(0);
+  });
+
+  it('should parse file system errors', () => {
+    const error = new Error('ENOENT: no such file or directory');
+    const parsed = handler.parseError(error);
+
+    expect(parsed.type).toBe(ErrorType.FILE_SYSTEM);
+    expect(parsed.suggestions.length).toBeGreaterThan(0);
   });
 
   it('should format errors', () => {
     const error = new Error('Test error');
-    const formatted = handler.formatError(error, { colors: false });
+    const parsed = handler.parseError(error);
+    const formatted = handler.formatError(parsed);
 
     expect(formatted).toBeDefined();
     expect(typeof formatted).toBe('string');
+    expect(formatted).toContain('Error');
   });
 
-  it('should return exit codes', () => {
-    const error = new Error('test.ts(10,5): error TS2304');
-    const exitCode = handler.getExitCode(error);
+  it('should format with suggestions', () => {
+    const error = new Error('Config not found');
+    const parsed = handler.parseError(error);
+    const formatted = handler.formatError(parsed);
 
-    expect(exitCode).toBe(1);
+    expect(formatted).toContain('Suggestions');
   });
 });
