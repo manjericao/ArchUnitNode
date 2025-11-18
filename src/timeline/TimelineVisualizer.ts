@@ -39,9 +39,9 @@ export class TimelineVisualizer {
   static generateHtml(report: TimelineReport, options: TimelineVisualizationOptions): void {
     const title = options.title || 'Architecture Evolution Timeline';
     const width = options.width || 1200;
-    // @ts-expect-error - Reserved for future chart rendering
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // Reserved for future chart rendering
     const _height = options.height || 600;
+    void _height; // Mark as intentionally unused for now
     const theme = options.theme || 'light';
     const includeViolationDetails = options.includeViolationDetails !== false;
 

@@ -32,11 +32,8 @@ describe('ArchitectureTimeline', () => {
         basePath: process.cwd(),
         patterns: ['**/*.ts'],
         rules: [
-          ArchRuleDefinition.classes()
-            .should()
-            .haveSimpleNameEndingWith('Service')
-            .orShould()
-            .haveSimpleNameEndingWith('Controller'),
+          ArchRuleDefinition.classes().should().haveSimpleNameEndingWith('Service'),
+          ArchRuleDefinition.classes().should().haveSimpleNameEndingWith('Controller'),
         ],
       };
 
