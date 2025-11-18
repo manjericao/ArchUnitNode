@@ -345,8 +345,23 @@ describe('Performance Tests', () => {
 
         // Cleanup
         for (const file of files) {
-          fs.unlinkSync(file);
+          try {
+            if (fs.existsSync(file)) {
+              fs.unlinkSync(file);
+            }
+          } catch (err) {
+            // Ignore cleanup errors
+          }
         }
+      }
+
+      // Final cleanup of temp directory
+      try {
+        if (fs.existsSync(tempDir)) {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+      } catch (err) {
+        // Ignore cleanup errors
       }
 
       console.log('\nScalability Test:');

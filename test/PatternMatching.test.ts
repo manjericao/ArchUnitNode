@@ -127,13 +127,14 @@ describe('Pattern Matching', () => {
       fs.writeFileSync(path.join(level2Dir, 'Level2.ts'), 'export class Level2 {}', 'utf-8');
 
       const classes = analyzer.analyze(tempDir).then((result) => {
-        // * should match only one level - looking for files in level1 directory
+        // resideInPackage matches the package and all sub-packages (like ArchUnit Java)
+        // Both Level1 (in level1) and Level2 (in level1/level2) should match
         const singleLevel = result.resideInPackage('level1');
 
         const classNames = singleLevel.getAll().map((c) => c.name);
-        // Should match level1 but not level2
+        // Should match both level1 and level2 (level2 is a subpackage of level1)
         expect(classNames).toContain('Level1');
-        expect(classNames).not.toContain('Level2');
+        expect(classNames).toContain('Level2');
 
         // Cleanup
         fs.unlinkSync(path.join(level1Dir, 'Level1.ts'));
