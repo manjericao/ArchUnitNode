@@ -10,11 +10,11 @@ const originalWrite = process.stdout.write;
 
 beforeEach(() => {
   writtenOutput = [];
-  // @ts-expect-error - Mocking stdout.write
+  // Mocking stdout.write
   process.stdout.write = jest.fn((str: string) => {
     writtenOutput.push(str);
     return true;
-  });
+  }) as any;
 });
 
 afterEach(() => {
