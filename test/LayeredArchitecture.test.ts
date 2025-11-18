@@ -11,7 +11,7 @@ describe('LayeredArchitecture', () => {
   });
 
   it('should define a layered architecture', async () => {
-    const classes = await analyzer.analyze(fixturesPath);
+    await analyzer.analyze(fixturesPath);
 
     const architecture = layeredArchitecture()
       .layer('Controllers')

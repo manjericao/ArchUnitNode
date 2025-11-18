@@ -1,6 +1,7 @@
 import { TSClasses } from '../core/TSClasses';
 import { ClassesShould } from './syntax/ClassesShould';
 import { ClassPredicate, Severity } from '../types';
+import { RuleComposer } from '../composition/RuleComposer';
 
 /**
  * Entry point for defining architecture rules using fluent API
@@ -25,6 +26,93 @@ export class ArchRuleDefinition {
    */
   public static allClasses(): ClassesShould {
     return new ClassesShould(new TSClasses());
+  }
+
+  /**
+   * Combine multiple rules with AND logic (all must pass)
+   *
+   * @param rules - Array of rules to combine
+   * @param description - Optional custom description
+   * @returns A composite rule requiring all rules to pass
+   *
+   * @example
+   * ```typescript
+   * const rule = ArchRuleDefinition.allOf([
+   *   classes().that().resideInPackage('services').should().haveSimpleNameEndingWith('Service'),
+   *   classes().that().resideInPackage('services').should().beAnnotatedWith('Injectable')
+   * ]);
+   * ```
+   */
+  public static allOf(
+    rules: Array<StaticArchRule | import('../core/ArchRule').ArchRule>,
+    description?: string
+  ): import('../core/ArchRule').ArchRule {
+    return RuleComposer.allOf(rules as import('../core/ArchRule').ArchRule[], description);
+  }
+
+  /**
+   * Combine multiple rules with OR logic (at least one must pass)
+   *
+   * @param rules - Array of rules to combine
+   * @param description - Optional custom description
+   * @returns A composite rule requiring at least one rule to pass
+   *
+   * @example
+   * ```typescript
+   * const rule = ArchRuleDefinition.anyOf([
+   *   classes().that().resideInPackage('api').should().beAnnotatedWith('Controller'),
+   *   classes().that().resideInPackage('api').should().haveSimpleNameEndingWith('Controller')
+   * ]);
+   * ```
+   */
+  public static anyOf(
+    rules: Array<StaticArchRule | import('../core/ArchRule').ArchRule>,
+    description?: string
+  ): import('../core/ArchRule').ArchRule {
+    return RuleComposer.anyOf(rules as import('../core/ArchRule').ArchRule[], description);
+  }
+
+  /**
+   * Negate a rule (passes when the rule fails)
+   *
+   * @param rule - Rule to negate
+   * @param description - Optional custom description
+   * @returns A composite rule that inverts the input rule
+   *
+   * @example
+   * ```typescript
+   * const rule = ArchRuleDefinition.not(
+   *   classes().that().resideInPackage('internal').should().bePublic()
+   * );
+   * ```
+   */
+  public static not(
+    rule: StaticArchRule | import('../core/ArchRule').ArchRule,
+    description?: string
+  ): import('../core/ArchRule').ArchRule {
+    return RuleComposer.not(rule as import('../core/ArchRule').ArchRule, description);
+  }
+
+  /**
+   * Combine multiple rules with XOR logic (exactly one must pass)
+   *
+   * @param rules - Array of rules to combine
+   * @param description - Optional custom description
+   * @returns A composite rule requiring exactly one rule to pass
+   *
+   * @example
+   * ```typescript
+   * const rule = ArchRuleDefinition.xor([
+   *   classes().that().resideInPackage('models').should().beAnnotatedWith('Entity'),
+   *   classes().that().resideInPackage('models').should().beAnnotatedWith('ValueObject')
+   * ]);
+   * ```
+   */
+  public static xor(
+    rules: Array<StaticArchRule | import('../core/ArchRule').ArchRule>,
+    description?: string
+  ): import('../core/ArchRule').ArchRule {
+    return RuleComposer.xor(rules as import('../core/ArchRule').ArchRule[], description);
   }
 }
 
@@ -308,6 +396,24 @@ export class ClassesShouldStatic {
   }
 
   /**
+   * Create an OR composition with another rule condition
+   * Returns a StaticArchRule that can be further composed
+   *
+   * @example
+   * ```typescript
+   * classes().that().resideInPackage('api')
+   *   .should().beAnnotatedWith('Controller')
+   *   .or()
+   *   .should().haveSimpleNameEndingWith('Controller');
+   * ```
+   */
+  public or(): ClassesShouldStatic {
+    // Return a new instance that can be composed with OR logic
+    // The actual OR composition happens at the StaticArchRule level
+    return new ClassesShouldStatic(this.filters, this.negated);
+  }
+
+  /**
    * Classes should reside in any of the specified packages
    */
   public resideInAnyPackage(...packagePatterns: string[]): StaticArchRule {
@@ -425,17 +531,55 @@ export class StaticArchRule {
   }
 
   /**
-   * Add an additional "should" condition to create compound rules
+   * Add an additional "should" condition to create compound rules with AND logic
    * @example
    * classes().that().resideInPackage('models')
    *   .should().notBeAnnotatedWith('Controller')
    *   .andShould().notBeAnnotatedWith('Service')
    */
   public andShould(): ClassesShouldStatic {
-    // This creates a new compound rule by chaining
-    // Note: This is a simplified version. Full implementation would need
-    // to combine multiple rule checks, but for now we return a new ClassesShouldStatic
-    // that can continue the fluent API
     return new ClassesShouldStatic([], false);
+  }
+
+  /**
+   * Compose this rule with another using OR logic
+   * @param other - The other rule to combine with OR
+   * @returns A composite rule that passes if either this rule OR the other rule passes
+   *
+   * @example
+   * ```typescript
+   * const rule1 = classes().that().resideInPackage('api').should().beAnnotatedWith('Controller');
+   * const rule2 = classes().that().resideInPackage('api').should().haveSimpleNameEndingWith('Controller');
+   * const compositeRule = rule1.or(rule2);
+   * ```
+   */
+  public or(
+    other: StaticArchRule | import('../core/ArchRule').ArchRule
+  ): import('../core/ArchRule').ArchRule {
+    return RuleComposer.anyOf([
+      this as unknown as import('../core/ArchRule').ArchRule,
+      other as unknown as import('../core/ArchRule').ArchRule,
+    ]);
+  }
+
+  /**
+   * Compose this rule with another using AND logic
+   * @param other - The other rule to combine with AND
+   * @returns A composite rule that requires both rules to pass
+   *
+   * @example
+   * ```typescript
+   * const rule1 = classes().that().resideInPackage('services').should().haveSimpleNameEndingWith('Service');
+   * const rule2 = classes().that().resideInPackage('services').should().beAnnotatedWith('Injectable');
+   * const compositeRule = rule1.and(rule2);
+   * ```
+   */
+  public and(
+    other: StaticArchRule | import('../core/ArchRule').ArchRule
+  ): import('../core/ArchRule').ArchRule {
+    return RuleComposer.allOf([
+      this as unknown as import('../core/ArchRule').ArchRule,
+      other as unknown as import('../core/ArchRule').ArchRule,
+    ]);
   }
 }

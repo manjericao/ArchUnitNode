@@ -45,6 +45,31 @@ export {
 export { ClassesThat } from './lang/syntax/ClassesThat';
 export { ClassesShould } from './lang/syntax/ClassesShould';
 
+// Rule Composition
+export { RuleComposer, CompositeRule, type LogicalOperator } from './composition';
+
+// Violation Analysis
+export {
+  ViolationAnalyzer,
+  type EnhancedViolation,
+  type ViolationGroup,
+  type ViolationAnalysis,
+  SuggestionEngine,
+  type SuggestedFix,
+} from './analysis';
+
+// Architectural Metrics
+export {
+  ArchitecturalMetricsAnalyzer,
+  type CouplingMetrics,
+  type CohesionMetrics,
+  type ComplexityMetrics,
+  type TechnicalDebt,
+  type DebtItem,
+  type ArchitectureFitness,
+  type ArchitecturalMetricsResult,
+} from './metrics';
+
 // Library (predefined patterns)
 export {
   Architectures,
