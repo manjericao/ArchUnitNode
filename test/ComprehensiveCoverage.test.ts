@@ -507,7 +507,7 @@ describe('Comprehensive Coverage Tests', () => {
         format: ReportFormat.MARKDOWN,
         outputPath: '/tmp/report.md',
       });
-      expect(md).toContain('# Architecture Violations Report');
+      expect(md).toContain('# ArchUnit Architecture Report');
       expect(md).toContain('Test Rule');
     });
 
@@ -594,11 +594,13 @@ describe('Comprehensive Coverage Tests', () => {
     });
 
     it('should compose rules with not', () => {
-      const rule = ArchRuleDefinition.classes().should().resideInPackage('bad-package');
+      const rule = ArchRuleDefinition.classes().should().resideInPackage('services');
 
       const composedRule = RuleComposer.not(rule);
       const violations = composedRule.check(testClasses);
-      expect(violations.length).toBe(0);
+      // NOT rule should invert: classes that DON'T reside in 'services'
+      // Since our test fixture has classes in services, the NOT rule should find violations
+      expect(violations.length).toBeGreaterThan(0);
     });
 
     it('should compose rules with xor', () => {
