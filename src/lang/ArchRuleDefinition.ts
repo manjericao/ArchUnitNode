@@ -460,6 +460,126 @@ export class ClassesShouldStatic {
   public not(): ClassesShouldStatic {
     return new ClassesShouldStatic(this.filters, !this.negated);
   }
+
+  /**
+   * Classes should be interfaces
+   */
+  public beInterfaces(): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).beInterfaces();
+    }, `Classes should be interfaces`);
+  }
+
+  /**
+   * Classes should NOT be interfaces
+   */
+  public notBeInterfaces(): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).notBeInterfaces();
+    }, `Classes should not be interfaces`);
+  }
+
+  /**
+   * Classes should be abstract
+   */
+  public beAbstract(): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).beAbstract();
+    }, `Classes should be abstract`);
+  }
+
+  /**
+   * Classes should NOT be abstract (should be concrete)
+   */
+  public notBeAbstract(): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).notBeAbstract();
+    }, `Classes should not be abstract`);
+  }
+
+  /**
+   * Classes should be assignable to a specific type
+   */
+  public beAssignableTo(className: string): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).beAssignableTo(className);
+    }, `Classes should be assignable to '${className}'`);
+  }
+
+  /**
+   * Classes should NOT be assignable to a specific type
+   */
+  public notBeAssignableTo(className: string): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).notBeAssignableTo(className);
+    }, `Classes should not be assignable to '${className}'`);
+  }
+
+  /**
+   * Classes should have only readonly fields (immutable)
+   */
+  public haveOnlyReadonlyFields(): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveOnlyReadonlyFields();
+    }, `Classes should have only readonly fields`);
+  }
+
+  /**
+   * Classes should have only private constructors
+   */
+  public haveOnlyPrivateConstructors(): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveOnlyPrivateConstructors();
+    }, `Classes should have only private constructors`);
+  }
+
+  /**
+   * Classes should have only public methods
+   */
+  public haveOnlyPublicMethods(): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveOnlyPublicMethods();
+    }, `Classes should have only public methods`);
+  }
+
+  /**
+   * Classes should have a specific fully qualified name
+   */
+  public haveFullyQualifiedName(fqn: string): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveFullyQualifiedName(fqn);
+    }, `Classes should have fully qualified name '${fqn}'`);
+  }
+
+  /**
+   * Classes should have a specific simple name (exact match)
+   */
+  public haveSimpleName(name: string): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).haveSimpleName(name);
+    }, `Classes should have simple name '${name}'`);
+  }
+
+  /**
+   * Classes should be assignable from a specific type
+   */
+  public beAssignableFrom(className: string): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).beAssignableFrom(className);
+    }, `Classes should be assignable from '${className}'`);
+  }
 }
 
 /**

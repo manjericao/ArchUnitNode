@@ -89,6 +89,90 @@ export class ClassesShould {
   public formCycles(): ArchRule {
     return new CyclicDependencyRule(this.tsClasses, false);
   }
+
+  /**
+   * Classes should be interfaces
+   */
+  public beInterfaces(): ArchRule {
+    return new InterfaceRule(this.tsClasses, true);
+  }
+
+  /**
+   * Classes should NOT be interfaces
+   */
+  public notBeInterfaces(): ArchRule {
+    return new InterfaceRule(this.tsClasses, false);
+  }
+
+  /**
+   * Classes should be abstract
+   */
+  public beAbstract(): ArchRule {
+    return new AbstractRule(this.tsClasses, true);
+  }
+
+  /**
+   * Classes should NOT be abstract (should be concrete)
+   */
+  public notBeAbstract(): ArchRule {
+    return new AbstractRule(this.tsClasses, false);
+  }
+
+  /**
+   * Classes should be assignable to a specific type
+   */
+  public beAssignableTo(className: string): ArchRule {
+    return new AssignableRule(this.tsClasses, className, true);
+  }
+
+  /**
+   * Classes should NOT be assignable to a specific type
+   */
+  public notBeAssignableTo(className: string): ArchRule {
+    return new AssignableRule(this.tsClasses, className, false);
+  }
+
+  /**
+   * Classes should have only readonly fields (immutable)
+   */
+  public haveOnlyReadonlyFields(): ArchRule {
+    return new ReadonlyFieldsRule(this.tsClasses);
+  }
+
+  /**
+   * Classes should have only private constructors
+   */
+  public haveOnlyPrivateConstructors(): ArchRule {
+    return new PrivateConstructorsRule(this.tsClasses);
+  }
+
+  /**
+   * Classes should have only public methods
+   */
+  public haveOnlyPublicMethods(): ArchRule {
+    return new PublicMethodsRule(this.tsClasses);
+  }
+
+  /**
+   * Classes should have a specific fully qualified name
+   */
+  public haveFullyQualifiedName(fqn: string): ArchRule {
+    return new FullyQualifiedNameRule(this.tsClasses, fqn);
+  }
+
+  /**
+   * Classes should have a specific simple name (exact match)
+   */
+  public haveSimpleName(name: string): ArchRule {
+    return new SimpleNameRule(this.tsClasses, name);
+  }
+
+  /**
+   * Classes should be assignable from a specific type
+   */
+  public beAssignableFrom(className: string): ArchRule {
+    return new AssignableFromRule(this.tsClasses, className);
+  }
 }
 
 /**
@@ -546,5 +630,286 @@ class CyclicDependencyRule extends BaseArchRule {
     }
 
     return cycles;
+  }
+}
+
+/**
+ * Rule for checking if classes are interfaces
+ */
+class InterfaceRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private shouldBeInterface: boolean
+  ) {
+    super(`Classes should ${shouldBeInterface ? 'be' : 'not be'} interfaces`);
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      const isInterface = cls.isInterface;
+      const violates = this.shouldBeInterface ? !isInterface : isInterface;
+
+      if (violates) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' ${this.shouldBeInterface ? 'is not' : 'is'} an interface`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking if classes are abstract
+ */
+class AbstractRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private shouldBeAbstract: boolean
+  ) {
+    super(`Classes should ${shouldBeAbstract ? 'be' : 'not be'} abstract`);
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      const isAbstract = cls.isAbstract;
+      const violates = this.shouldBeAbstract ? !isAbstract : isAbstract;
+
+      if (violates) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' ${this.shouldBeAbstract ? 'is not' : 'is'} abstract`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking if classes are assignable to a type
+ */
+class AssignableRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private className: string,
+    private shouldBeAssignable: boolean
+  ) {
+    super(`Classes should ${shouldBeAssignable ? 'be' : 'not be'} assignable to '${className}'`);
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      const isAssignable = cls.isAssignableTo(this.className);
+      const violates = this.shouldBeAssignable ? !isAssignable : isAssignable;
+
+      if (violates) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' ${this.shouldBeAssignable ? 'is not' : 'is'} assignable to '${this.className}'`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking if classes have only readonly fields
+ */
+class ReadonlyFieldsRule extends BaseArchRule {
+  constructor(private classes: TSClasses) {
+    super('Classes should have only readonly fields');
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      if (!cls.hasOnlyReadonlyFields() && cls.properties.length > 0) {
+        const mutableFields = cls.properties.filter((p) => !p.isReadonly);
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' has mutable fields: ${mutableFields.map((f) => f.name).join(', ')}`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking if classes have only private constructors
+ */
+class PrivateConstructorsRule extends BaseArchRule {
+  constructor(private classes: TSClasses) {
+    super('Classes should have only private constructors');
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      if (!cls.hasOnlyPrivateConstructors()) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' does not have only private constructors`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking if classes have only public methods
+ */
+class PublicMethodsRule extends BaseArchRule {
+  constructor(private classes: TSClasses) {
+    super('Classes should have only public methods');
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      if (!cls.hasOnlyPublicMethods() && cls.methods.length > 0) {
+        const nonPublicMethods = cls.methods.filter(
+          (m) => !m.isPublic || m.isPrivate || m.isProtected
+        );
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' has non-public methods: ${nonPublicMethods.map((m) => m.name).join(', ')}`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking fully qualified name
+ */
+class FullyQualifiedNameRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private fqn: string
+  ) {
+    super(`Classes should have fully qualified name '${fqn}'`);
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      if (cls.getFullyQualifiedName() !== this.fqn) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' has fully qualified name '${cls.getFullyQualifiedName()}' but expected '${this.fqn}'`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking simple name (exact match)
+ */
+class SimpleNameRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private name: string
+  ) {
+    super(`Classes should have simple name '${name}'`);
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      if (cls.name !== this.name) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' does not have simple name '${this.name}'`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking if classes are assignable from a type
+ */
+class AssignableFromRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private className: string
+  ) {
+    super(`Classes should be assignable from '${className}'`);
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      // Check if the specified className can be assigned to this class
+      // This means checking if className extends or implements cls
+      // For now, we check if cls is in the implements or extends chain
+      const isAssignableFrom =
+        cls.extends === this.className || cls.implements.includes(this.className);
+
+      if (!isAssignableFrom) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' is not assignable from '${this.className}'`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
   }
 }

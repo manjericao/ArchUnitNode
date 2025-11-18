@@ -8,7 +8,7 @@
 
 import { TSClass } from '../core/TSClass';
 import { TSClasses } from '../core/TSClasses';
-import { ArchitectureViolation } from '../core/ArchRule';
+import { ArchitectureViolation, TSDecorator, TSMethod, TSProperty, Severity } from '../types';
 
 /**
  * Test fixture builder for TSClass
@@ -18,11 +18,11 @@ export class TSClassBuilder {
   private filePath: string = '/test/TestClass.ts';
   private packagePath: string = 'test';
   private dependencies: string[] = [];
-  private decorators: string[] = [];
+  private decorators: TSDecorator[] = [];
   private isInterface: boolean = false;
   private isAbstract: boolean = false;
-  private methods: string[] = [];
-  private properties: string[] = [];
+  private methods: TSMethod[] = [];
+  private properties: TSProperty[] = [];
 
   /**
    * Set class name
@@ -60,7 +60,13 @@ export class TSClassBuilder {
    * Add decorators
    */
   withDecorators(...decorators: string[]): this {
-    this.decorators.push(...decorators);
+    this.decorators.push(
+      ...decorators.map((name) => ({
+        name,
+        arguments: [],
+        location: { filePath: this.filePath, line: 1, column: 1 },
+      }))
+    );
     return this;
   }
 
@@ -84,7 +90,19 @@ export class TSClassBuilder {
    * Add methods
    */
   withMethods(...methods: string[]): this {
-    this.methods.push(...methods);
+    this.methods.push(
+      ...methods.map((name) => ({
+        name,
+        parameters: [],
+        isPublic: true,
+        isPrivate: false,
+        isProtected: false,
+        isStatic: false,
+        isAsync: false,
+        decorators: [],
+        location: { filePath: this.filePath, line: 1, column: 1 },
+      }))
+    );
     return this;
   }
 
@@ -92,7 +110,18 @@ export class TSClassBuilder {
    * Add properties
    */
   withProperties(...properties: string[]): this {
-    this.properties.push(...properties);
+    this.properties.push(
+      ...properties.map((name) => ({
+        name,
+        isPublic: true,
+        isPrivate: false,
+        isProtected: false,
+        isStatic: false,
+        isReadonly: false,
+        decorators: [],
+        location: { filePath: this.filePath, line: 1, column: 1 },
+      }))
+    );
     return this;
   }
 
@@ -100,20 +129,20 @@ export class TSClassBuilder {
    * Build the TSClass instance
    */
   build(): TSClass {
-    return {
+    return new TSClass({
       name: this.name,
       filePath: this.filePath,
-      packagePath: this.packagePath,
-      dependencies: this.dependencies,
+      module: this.packagePath,
+      implements: [],
       decorators: this.decorators,
-      isInterface: this.isInterface,
       isAbstract: this.isAbstract,
+      isExported: true,
       methods: this.methods,
       properties: this.properties,
+      location: { filePath: this.filePath, line: 1, column: 1 },
       imports: [],
-      exports: [],
-      sourceCode: `// Generated test fixture for ${this.name}`,
-    };
+      dependencies: this.dependencies,
+    });
   }
 }
 
@@ -227,13 +256,19 @@ export class TSClassesBuilder {
     this.addModel('User', 'domain/models');
     this.addModel('Product', 'domain/models');
 
-    // Add dependencies
-    this.classes[0].dependencies = ['UserService']; // UserController -> UserService
-    this.classes[1].dependencies = ['ProductService']; // ProductController -> ProductService
-    this.classes[2].dependencies = ['UserRepository']; // UserService -> UserRepository
-    this.classes[3].dependencies = ['ProductRepository']; // ProductService -> ProductRepository
-    this.classes[4].dependencies = ['User']; // UserRepository -> User
-    this.classes[5].dependencies = ['Product']; // ProductRepository -> Product
+    // Add dependencies (using any cast for test fixtures to bypass readonly)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.classes[0] as any).dependencies = ['UserService']; // UserController -> UserService
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.classes[1] as any).dependencies = ['ProductService']; // ProductController -> ProductService
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.classes[2] as any).dependencies = ['UserRepository']; // UserService -> UserRepository
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.classes[3] as any).dependencies = ['ProductRepository']; // ProductService -> ProductRepository
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.classes[4] as any).dependencies = ['User']; // UserRepository -> User
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.classes[5] as any).dependencies = ['Product']; // ProductRepository -> Product
 
     return this;
   }
@@ -260,7 +295,7 @@ export class ViolationBuilder {
   private className: string = 'TestClass';
   private message: string = 'Test violation';
   private filePath: string = '/test/TestClass.ts';
-  private severity: 'error' | 'warning' = 'error';
+  private severity: Severity = Severity.ERROR;
   private lineNumber?: number;
   private codeContext?: string;
 
@@ -292,7 +327,7 @@ export class ViolationBuilder {
    * Set as warning
    */
   asWarning(): this {
-    this.severity = 'warning';
+    this.severity = Severity.WARNING;
     return this;
   }
 
@@ -300,7 +335,7 @@ export class ViolationBuilder {
    * Set as error
    */
   asError(): this {
-    this.severity = 'error';
+    this.severity = Severity.ERROR;
     return this;
   }
 
@@ -325,12 +360,13 @@ export class ViolationBuilder {
    */
   build(): ArchitectureViolation {
     return {
-      className: this.className,
-      message: this.message,
+      message: `${this.message} (class: ${this.className})${this.codeContext ? ', ' + this.codeContext : ''}`,
       filePath: this.filePath,
+      location: this.lineNumber
+        ? { filePath: this.filePath, line: this.lineNumber, column: 1 }
+        : undefined,
+      rule: 'Test Rule',
       severity: this.severity,
-      lineNumber: this.lineNumber,
-      codeContext: this.codeContext,
     };
   }
 }
@@ -492,10 +528,7 @@ export class Generator {
    * Generate random TSClass
    */
   static randomClass(): TSClass {
-    return createClass()
-      .withName(this.className())
-      .withPackagePath(this.packagePath())
-      .build();
+    return createClass().withName(this.className()).withPackagePath(this.packagePath()).build();
   }
 
   /**
