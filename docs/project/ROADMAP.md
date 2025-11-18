@@ -26,6 +26,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 ### 🚧 Version 1.1.0 (Q1 2025)
 
 **Developer Experience**
+
 - [ ] Configuration file support (`archunit.config.js`)
 - [ ] Better error messages with code snippets
 - [ ] Debug mode with verbose logging
@@ -33,6 +34,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 - [ ] Watch mode for development
 
 **CI/CD & Automation**
+
 - [x] GitHub Actions workflows
 - [x] Automated releases with semantic-release
 - [x] CodeQL security scanning
@@ -40,6 +42,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 - [ ] Coverage reporting to Codecov
 
 **Documentation**
+
 - [x] SECURITY.md
 - [x] CHANGELOG.md
 - [x] FAQ.md
@@ -48,6 +51,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 - [ ] Interactive examples
 
 **Testing & Quality**
+
 - [ ] Increase test coverage to 90%+
 - [ ] Integration tests
 - [ ] E2E tests with real projects
@@ -58,12 +62,14 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 ### 📋 Version 1.2.0 (Q2 2025)
 
 **Performance**
+
 - [ ] Caching mechanism for faster subsequent runs
 - [ ] Parallel analysis for large codebases
 - [ ] Incremental analysis (only changed files)
 - [ ] Memory optimization for large projects
 
 **New Rules & Patterns**
+
 - [ ] Clean Architecture pattern support
 - [ ] Hexagonal/Onion architecture enhancements
 - [ ] Microservices architecture patterns
@@ -72,6 +78,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 - [ ] Event-driven architecture rules
 
 **Advanced Features**
+
 - [ ] Custom metric collection (complexity, cohesion, coupling)
 - [ ] Architecture visualization/diagramming
 - [ ] Rule composition and reuse
@@ -81,6 +88,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 ### 📋 Version 1.3.0 (Q3 2025)
 
 **Ecosystem Integration**
+
 - [ ] VS Code extension
 - [ ] WebStorm/IntelliJ plugin
 - [ ] CLI tool for standalone usage
@@ -89,6 +97,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 - [ ] GitLab CI component
 
 **Framework-Specific Support**
+
 - [ ] React architecture rules (components, hooks, context)
 - [ ] Angular module boundary checks
 - [ ] Vue.js composition API patterns
@@ -97,6 +106,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 - [ ] Svelte component patterns
 
 **Reporting**
+
 - [ ] HTML report generation
 - [ ] JSON output format
 - [ ] SonarQube integration
@@ -106,12 +116,14 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 ### 📋 Version 2.0.0 (Q4 2025)
 
 **Breaking Changes** (when necessary)
+
 - [ ] Improved API based on community feedback
 - [ ] Plugin system for extensibility
 - [ ] Custom parser support
 - [ ] Multi-language support (starting with JSX/TSX enhancements)
 
 **Advanced Analysis**
+
 - [ ] Runtime dependency analysis (optional)
 - [ ] Call graph analysis
 - [ ] Data flow analysis
@@ -120,6 +132,7 @@ To become the go-to architecture testing library for TypeScript and JavaScript p
 - [ ] Liskov substitution validation
 
 **AI-Powered Features**
+
 - [ ] Suggest architecture improvements
 - [ ] Auto-generate rules from existing codebase
 - [ ] Detect architectural anti-patterns
@@ -142,18 +155,21 @@ Features requested by the community (vote on GitHub Discussions):
 ## Long-term Goals
 
 **Ecosystem Growth**
+
 - Build a community of contributors
 - Create a plugin marketplace
 - Provide enterprise support options
 - Develop training materials and certification
 
 **Standardization**
+
 - Define standard architectural patterns for TS/JS
 - Create shareable rule configurations
 - Establish best practices guide
 - Collaborate with framework teams
 
 **Innovation**
+
 - Research ML-based architecture analysis
 - Explore runtime architecture validation
 - Develop architecture evolution tracking

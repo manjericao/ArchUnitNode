@@ -3,6 +3,7 @@
 ## Critical Findings
 
 ### 1. DEPENDENCY ANALYSIS IS BROKEN
+
 ```typescript
 // This API exists but returns EMPTY ARRAYS:
 rule.onlyDependOnClassesThat().resideInPackage('api')
@@ -14,33 +15,35 @@ Fix Effort: HIGH (needs module resolution)
 ```
 
 ### 2. NO PERFORMANCE OPTIMIZATION
+
 - **Sequential file parsing** → 3-8x slower than possible
 - **No caching** → 60-80% wasted re-analysis time
 - **O(n·m·k) layer lookups** → 10-20% speedup available
 - **Sequential glob patterns** → 5-10% improvement available
 
 ### 3. HIDDEN FEATURES
+
 ```typescript
 // This code exists but isn't exposed:
-analyzer.findCyclicDependencies()  // ← Works but private!
+analyzer.findCyclicDependencies(); // ← Works but private!
 //
 // Should be public API:
-rule.noClasses().should().formCycles()
+rule.noClasses().should().formCycles();
 ```
 
 ---
 
 ## By the Numbers
 
-| Metric | Status | Potential |
-|--------|--------|-----------|
-| Lines of Code | 1,954 | — |
-| Design Patterns | 5+ good ones | ✅ |
-| Architecture Patterns | 2 (Layered, Onion) | Need 5-10 |
-| Rules Working | 3/5 types | ❌ Dependency rules broken |
-| Performance | Unoptimized | 60-80% improvement |
-| Caching | None | Could save most time |
-| Test Coverage | Basic | Adequate |
+| Metric                | Status             | Potential                  |
+| --------------------- | ------------------ | -------------------------- |
+| Lines of Code         | 1,954              | —                          |
+| Design Patterns       | 5+ good ones       | ✅                         |
+| Architecture Patterns | 2 (Layered, Onion) | Need 5-10                  |
+| Rules Working         | 3/5 types          | ❌ Dependency rules broken |
+| Performance           | Unoptimized        | 60-80% improvement         |
+| Caching               | None               | Could save most time       |
+| Test Coverage         | Basic              | Adequate                   |
 
 ---
 
@@ -69,6 +72,7 @@ rule.noClasses().should().formCycles()
 ## Quick Win Opportunities (1-2 weeks each)
 
 ### Quick Win #1: Expose Cyclic Dependency Detection
+
 **Files:** `src/analyzer/CodeAnalyzer.ts` (line 123-156 already implemented)
 
 ```typescript
@@ -86,6 +90,7 @@ rule.noClasses().should().formCycles();
 ---
 
 ### Quick Win #2: Implement Basic Caching
+
 **Files:** `src/analyzer/CodeAnalyzer.ts`
 
 ```typescript
@@ -106,14 +111,16 @@ if (cached?.hash === currentHash) {
 ---
 
 ### Quick Win #3: Add Rule Composition (OR/AND)
+
 **Files:** `src/lang/ArchRuleDefinition.ts`
 
 ```typescript
 // Add to fluent API:
-rule.classes()
+rule
+  .classes()
   .that()
   .haveSimpleNameEndingWith('Service')
-  .or()  // ← Add this
+  .or() // ← Add this
   .haveSimpleNameEndingWith('Handler')
   .should()
   .resideInPackage('services');
@@ -125,6 +132,7 @@ rule.classes()
 ---
 
 ### Quick Win #4: Implement getDependencies()
+
 **Files:** `src/core/TSClass.ts` + `src/analyzer/CodeAnalyzer.ts`
 
 ```typescript
@@ -151,43 +159,48 @@ for (const imp of module.imports) {
 
 ## Medium-Term Improvements (1-2 months)
 
-| Priority | Feature | Effort | Value |
-|----------|---------|--------|-------|
-| 1 | Parallel parsing | 2 days | 3-8x speedup |
-| 2 | Proper module resolution | 5 days | Fixes dependency analysis |
-| 3 | 3+ architecture patterns | 3 days | Better library |
-| 4 | CLI tool | 2 days | CI/CD integration |
-| 5 | HTML reports | 2 days | Better visibility |
+| Priority | Feature                  | Effort | Value                     |
+| -------- | ------------------------ | ------ | ------------------------- |
+| 1        | Parallel parsing         | 2 days | 3-8x speedup              |
+| 2        | Proper module resolution | 5 days | Fixes dependency analysis |
+| 3        | 3+ architecture patterns | 3 days | Better library            |
+| 4        | CLI tool                 | 2 days | CI/CD integration         |
+| 5        | HTML reports             | 2 days | Better visibility         |
 
 ---
 
 ## Architecture Issues Found
 
 ### Issue #1: getDependencies() Returns Empty
+
 - **Location:** `src/core/TSClass.ts:87-90`
 - **Impact:** Dependency rules non-functional
 - **Complexity:** HIGH (module resolution needed)
 - **Fix:** Implement actual dependency tracking
 
 ### Issue #2: DependencyPackageRule Is Stub
+
 - **Location:** `src/lang/syntax/ClassesShould.ts:214-230`
 - **Impact:** No dependency checking
 - **Complexity:** MEDIUM (depends on getDependencies())
 - **Fix:** Implement actual rule checking
 
 ### Issue #3: No AST Caching
+
 - **Location:** `src/analyzer/CodeAnalyzer.ts`
 - **Impact:** 60-80% performance loss
 - **Complexity:** LOW (simple caching)
 - **Fix:** Add Map-based cache with file hashing
 
 ### Issue #4: Sequential File Processing
+
 - **Location:** `src/analyzer/CodeAnalyzer.ts:33-48`
 - **Impact:** 3-8x slower than possible
 - **Complexity:** MEDIUM (Promise.all patterns)
 - **Fix:** Use Promise.all with batching
 
 ### Issue #5: Layer Lookup O(n·m·k)
+
 - **Location:** `src/library/LayeredArchitecture.ts:149-161`
 - **Impact:** 10-20% performance hit
 - **Complexity:** LOW (pre-compute index)
@@ -230,13 +243,13 @@ src/
 
 ## Design Patterns Used
 
-| Pattern | Location | Quality |
-|---------|----------|---------|
-| **Builder** | Fluent API | ✅ Excellent |
-| **Strategy** | ArchRule implementations | ✅ Good |
-| **Factory** | Parser, Rules | ✅ Good |
-| **Visitor** (partial) | AST traversal | ⚠ Limited |
-| **Collection** | TSClasses filtering | ✅ Good |
+| Pattern               | Location                 | Quality      |
+| --------------------- | ------------------------ | ------------ |
+| **Builder**           | Fluent API               | ✅ Excellent |
+| **Strategy**          | ArchRule implementations | ✅ Good      |
+| **Factory**           | Parser, Rules            | ✅ Good      |
+| **Visitor** (partial) | AST traversal            | ⚠ Limited   |
+| **Collection**        | TSClasses filtering      | ✅ Good      |
 
 ---
 
@@ -302,24 +315,28 @@ Architecture Patterns:   40% (2 of 5+ needed)
 ## Recommended Next Steps
 
 ### Phase 1: Fix Broken Features (1-2 weeks)
+
 1. Implement `getDependencies()` ← HIGH PRIORITY
 2. Fix `DependencyPackageRule` ← HIGH PRIORITY
 3. Expose cyclic dependency detection ← QUICK WIN
 4. Add caching layer ← QUICK WIN
 
 ### Phase 2: Improve Performance (1-2 weeks)
+
 1. Parallel file parsing
 2. Pre-compute layer indices
 3. Parallel rule checking
 4. Monitor caching hit rates
 
 ### Phase 3: Expand Capabilities (2-4 weeks)
+
 1. Add 3+ architecture patterns
 2. Implement full module resolution
 3. Add metrics/reporting API
 4. CLI tool
 
 ### Phase 4: Polish & Integration (2-4 weeks)
+
 1. GitHub Actions integration
 2. IDE/LSP support
 3. Historical tracking
@@ -334,12 +351,12 @@ interface HealthMetrics {
   // Coverage
   functionalRulesWorking: 3/5,      // Currently broken
   architecturePatterns: 2/10,       // Limited library
-  
+
   // Performance
   cacheHitRate: 0%,                 // No caching yet
   avgParseTimeMs: 1000,             // Should be <300
   parallelization: 'none',          // Should be full
-  
+
   // Quality
   testCoverage: 65%,                // Need dependency tests
   stubImplementations: 3,           // Need to complete
@@ -356,4 +373,3 @@ interface HealthMetrics {
 3. **src/lang/syntax/ClassesShould.ts** - Implement rules
 4. **src/library/LayeredArchitecture.ts** - Optimize + add patterns
 5. **src/index.ts** - Expose hidden features
-

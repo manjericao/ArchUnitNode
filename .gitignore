@@ -58,9 +58,11 @@ node_modules
 /coverage-load/
 /coverage-unit/
 
-# Generated documentation (but keep markdown docs)
-docs/
-!docs/*.md
+# Generated documentation (TypeDoc HTML output)
+# Keep markdown documentation in docs/
+docs/generated/
+docs/html/
+docs/typedoc/
 
 # Husky
 .husky/_/

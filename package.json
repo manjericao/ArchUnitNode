@@ -18,9 +18,9 @@
   "files": [
     "dist",
     "bin",
+    "docs",
     "README.md",
-    "LICENSE",
-    "API.md"
+    "LICENSE"
   ],
   "engines": {
     "node": ">= 14",

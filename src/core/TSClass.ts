@@ -137,4 +137,85 @@ export class TSClass {
   public dependsOnClassInPackage(packagePattern: string): boolean {
     return this.dependsOn(packagePattern);
   }
+
+  /**
+   * Check if this class is an interface
+   * Note: In TypeScript, we detect interfaces by checking if class has no implementation
+   */
+  public get isInterface(): boolean {
+    // TypeScript interfaces don't have methods with implementations
+    // and don't have concrete properties (only declarations)
+    // This is a heuristic - true interfaces are stripped at runtime
+    return this.methods.length === 0 && this.properties.every((p) => !p.type);
+  }
+
+  /**
+   * Check if all properties are readonly (immutable class)
+   */
+  public hasOnlyReadonlyFields(): boolean {
+    if (this.properties.length === 0) {
+      return false; // No fields to check
+    }
+    return this.properties.every((prop) => prop.isReadonly);
+  }
+
+  /**
+   * Check if all methods are public
+   */
+  public hasOnlyPublicMethods(): boolean {
+    if (this.methods.length === 0) {
+      return false; // No methods to check
+    }
+    return this.methods.every(
+      (method) => method.isPublic && !method.isPrivate && !method.isProtected
+    );
+  }
+
+  /**
+   * Check if class has any private constructors
+   */
+  public hasPrivateConstructor(): boolean {
+    const constructors = this.methods.filter((m) => m.name === 'constructor');
+    return constructors.some((c) => c.isPrivate);
+  }
+
+  /**
+   * Check if class has ONLY private constructors
+   */
+  public hasOnlyPrivateConstructors(): boolean {
+    const constructors = this.methods.filter((m) => m.name === 'constructor');
+    if (constructors.length === 0) {
+      return false; // No constructors
+    }
+    return constructors.every((c) => c.isPrivate);
+  }
+
+  /**
+   * Check if class has any public constructors
+   */
+  public hasPublicConstructor(): boolean {
+    const constructors = this.methods.filter((m) => m.name === 'constructor');
+    return constructors.some((c) => c.isPublic && !c.isPrivate && !c.isProtected);
+  }
+
+  /**
+   * Check if class has specific field matching predicate
+   */
+  public hasFieldMatching(predicate: (prop: TSProperty) => boolean): boolean {
+    return this.properties.some(predicate);
+  }
+
+  /**
+   * Check if class has specific method matching predicate
+   */
+  public hasMethodMatching(predicate: (method: TSMethod) => boolean): boolean {
+    return this.methods.some(predicate);
+  }
+
+  /**
+   * Get fully qualified name (module path + class name)
+   */
+  public getFullyQualifiedName(): string {
+    return `${this.module}.${this.name}`;
+  }
 }

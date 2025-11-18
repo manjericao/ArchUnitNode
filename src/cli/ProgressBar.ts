@@ -147,11 +147,12 @@ export class Spinner {
  */
 export class MultiProgressBar {
   private bars: Map<string, { current: number; total: number; label: string }>;
-  private startTime: number;
+  private _startTime: number; // Reserved for future use
 
   constructor() {
     this.bars = new Map();
-    this.startTime = Date.now();
+    this._startTime = Date.now();
+    void this._startTime; // Mark as intentionally unused for now
   }
 
   /**
@@ -216,12 +217,15 @@ export class MultiProgressBar {
     }
 
     const lines: string[] = [];
-    for (const [id, bar] of this.bars) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for (const [_id, bar] of this.bars) {
       const percentage = (bar.current / bar.total) * 100;
       const filled = Math.floor(percentage / 5); // 20 char width
       const empty = 20 - filled;
       const barStr = '█'.repeat(filled) + '░'.repeat(empty);
-      lines.push(`${bar.label}: [${barStr}] ${percentage.toFixed(0)}% (${bar.current}/${bar.total})`);
+      lines.push(
+        `${bar.label}: [${barStr}] ${percentage.toFixed(0)}% (${bar.current}/${bar.total})`
+      );
     }
 
     // Clear and rewrite

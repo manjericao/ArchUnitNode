@@ -1,6 +1,7 @@
 # ArchUnit-TS Comprehensive Technical Analysis
 
 ## Executive Summary
+
 ArchUnit-TS is a ~1,954 line TypeScript library for architecture validation using a fluent API and AST parsing. The codebase demonstrates solid design patterns but contains significant performance and functionality gaps that present substantial improvement opportunities.
 
 ---
@@ -8,6 +9,7 @@ ArchUnit-TS is a ~1,954 line TypeScript library for architecture validation usin
 ## 1. CURRENT ARCHITECTURE & DESIGN PATTERNS
 
 ### 1.1 Architecture Overview
+
 The library follows a **pipeline architecture** with clear separation of concerns:
 
 ```
@@ -29,26 +31,31 @@ ArchitectureViolation[]
 ### 1.2 Design Patterns Identified
 
 **Builder Pattern (Fluent API):**
+
 - `ArchRuleDefinition.classes().that().haveSimpleNameEndingWith('Service').should().resideInPackage('services')`
 - Excellent UX, matches original ArchUnit (Java) philosophy
 - Implemented via `ClassesThat` → `ClassesShould` → `ArchRule`
 - Also used for `LayeredArchitecture` definitions
 
 **Strategy Pattern (Rules):**
+
 - `ArchRule` interface with implementations: `PackageRule`, `DecoratorRule`, `NamingRule`
 - Rules are evaluated via polymorphic `check()` method
 - Extensible design but limited in current scope
 
 **Factory Pattern:**
+
 - `TypeScriptParser` creates domain models from AST
 - `StaticArchRule` factory creates rule instances
 - `createArchUnit()` factory function
 
 **Visitor Pattern (Partial):**
+
 - `TypeScriptParser.visitNode()` traverses AST
 - Limited to single-pass traversal, doesn't capture full semantic information
 
 **Collection Pattern:**
+
 - `TSClasses` wraps `TSClass[]` with filter operations
 - Functional style: `that()`, `resideInPackage()`, etc.
 - Immutable operation results (creates new instances)
@@ -56,6 +63,7 @@ ArchitectureViolation[]
 ### 1.3 Key Components
 
 **Core Domain Model (src/core/):**
+
 - `TSClass`: Represents a class with metadata (name, location, decorators, methods, properties)
 - `TSClasses`: Collection with chainable filtering
 - `ArchRule`/`BaseArchRule`: Abstract rule interface and base implementation
@@ -63,6 +71,7 @@ ArchitectureViolation[]
 - ❌ Missing dependency graph representation
 
 **Parser (src/parser/):**
+
 - Uses `@typescript-eslint/typescript-estree` for AST parsing
 - Extracts: classes, interfaces, functions, imports, exports
 - Captures: decorators, access modifiers, abstract flags
@@ -71,6 +80,7 @@ ArchitectureViolation[]
 - ❌ No type information captured (not using full TypeScript compiler)
 
 **Analyzer (src/analyzer/):**
+
 - File discovery via `glob` with configurable patterns
 - Dependency tracking in simple edges list
 - ✅ Handles ignored paths (node_modules, dist, .d.ts)
@@ -79,6 +89,7 @@ ArchitectureViolation[]
 - ❌ Stub implementation for cyclic dependency detection (DFS exists but incomplete)
 
 **Rule Language (src/lang/):**
+
 - `ArchRuleDefinition`: Static fluent API entry point
 - `ClassesThatStatic`/`ClassesShouldStatic`: Static rule building
 - `ClassesThat`/`ClassesShould`: Dynamic rule evaluation
@@ -86,6 +97,7 @@ ArchitectureViolation[]
 - ❌ Dependency rules are not implemented (return empty arrays)
 
 **Architecture Library (src/library/):**
+
 - `LayeredArchitecture`: Basic layer definition and checking
 - `OnionArchitecture`: Started but minimal implementation
 - ✅ Demonstrates pattern library concept
@@ -101,6 +113,7 @@ ArchitectureViolation[]
 **A. NO CACHING MECHANISM**
 
 Current Flow (EVERY ANALYSIS):
+
 ```
 1. Scan filesystem (glob)
 2. Read each file from disk
@@ -113,13 +126,14 @@ Current Flow (EVERY ANALYSIS):
 Impact: A 500-file codebase is fully re-parsed on every rule check.
 
 **Optimization Opportunity - Multi-Layer Caching:**
+
 ```typescript
 Level 1: AST Cache
 - Hash(filePath + fileContent) → ParsedModule
 - Invalidate on file change
 - In-memory (per analyzer instance)
 
-Level 2: Module Cache  
+Level 2: Module Cache
 - Hash(filePath) → TSModule
 - Survives across rule checks
 - Can be serialized to disk
@@ -137,10 +151,11 @@ Estimated Performance Gain: **60-80% reduction in analysis time** for multi-rule
 **B. SEQUENTIAL FILE PROCESSING**
 
 Current implementation:
+
 ```typescript
 for (const file of files) {
   try {
-    const module = this.parser.parseFile(file);  // I/O + CPU bound
+    const module = this.parser.parseFile(file); // I/O + CPU bound
     this.modules.set(file, module);
     // ...
   } catch (error) {
@@ -150,21 +165,21 @@ for (const file of files) {
 ```
 
 Issues:
+
 - No parallelization despite Node.js async capabilities
 - I/O bottleneck: reads files sequentially
 - CPU bottleneck: AST parsing sequential
 - Error handling stops single file, not batch
 
 **Optimization Opportunity - Parallel Processing:**
+
 ```typescript
 // Batch parallel parsing with concurrency control
 const batchSize = 10;
 for (let i = 0; i < files.length; i += batchSize) {
   const batch = files.slice(i, i + batchSize);
-  const results = await Promise.all(
-    batch.map(f => parseFileWithErrorHandling(f))
-  );
-  results.forEach(r => {
+  const results = await Promise.all(batch.map((f) => parseFileWithErrorHandling(f)));
+  results.forEach((r) => {
     if (r.success) this.modules.set(r.file, r.module);
   });
 }
@@ -177,6 +192,7 @@ Estimated Performance Gain: **3-8x speedup** on 4-core machines (I/O bound).
 **C. INEFFICIENT DEPENDENCY CHECKING**
 
 Current `getDependencies()` implementation:
+
 ```typescript
 public getDependencies(): string[] {
   return [];  // ← EMPTY! Not implemented
@@ -184,12 +200,14 @@ public getDependencies(): string[] {
 ```
 
 Impact: Dependency-based rules don't work at all:
+
 ```typescript
-rule.onlyDependOnClassesThat().resideInPackage('api')
+rule.onlyDependOnClassesThat().resideInPackage('api');
 // ↑ Returns no violations because no dependencies are captured
 ```
 
 The `DependencyPackageRule` and `DependencyMultiPackageRule` both return `[]`:
+
 ```typescript
 check(): ArchitectureViolation[] {
   // This would need to be implemented with actual dependency analysis
@@ -201,6 +219,7 @@ check(): ArchitectureViolation[] {
 **Optimization Opportunity - Proper Dependency Resolution:**
 
 Need to:
+
 1. Build a **module resolution graph** (not just import strings)
 2. Track actual class-to-class dependencies
 3. Build **transitive dependency graph**
@@ -210,13 +229,13 @@ Need to:
 interface DependencyGraph {
   // { 'src/services/UserService.ts': Set(['src/models/User.ts', 'src/repos/UserRepo.ts']) }
   edges: Map<string, Set<string>>;
-  
+
   // Transitive closure for checking chains
   getTransitiveDeps(file: string): Set<string>;
-  
+
   // Cycle detection
   findCycles(): string[][];
-  
+
   // Path finding for root cause analysis
   getPath(from: string, to: string): string[] | null;
 }
@@ -229,14 +248,15 @@ Estimated Complexity: **HIGH** - requires TypeScript module resolution algorithm
 **D. LAYER CHECKING INEFFICIENCY**
 
 In `LayeredArchitecture.check()`:
+
 ```typescript
 // For EACH rule, FOR EACH class, FOR EACH dependency
 for (const rule of this.accessRules) {
   const fromLayer = classesByLayer.get(rule.from);
-  
+
   for (const cls of fromLayer.getAll()) {
-    const dependencies = cls.getDependencies();  // ← Always empty!
-    
+    const dependencies = cls.getDependencies(); // ← Always empty!
+
     for (const dep of dependencies) {
       // Nested loop over layers to find dep's layer
       const depLayer = this.findLayerForDependency(dep, classesByLayer);
@@ -249,6 +269,7 @@ for (const rule of this.accessRules) {
 O(n·m·k) complexity without any dependency data!
 
 **Optimization:**
+
 ```typescript
 // Pre-compute layer membership
 const classToLayer = new Map<string, string>();
@@ -267,32 +288,34 @@ const depLayer = classToLayer.get(dep);
 **E. GLOB PATTERN INEFFICIENCY**
 
 Current:
+
 ```typescript
 private async findFiles(basePath: string, patterns: string[]): Promise<string[]> {
   const allFiles: Set<string> = new Set();
-  
+
   for (const pattern of patterns) {  // ← Sequential
     const files = await glob(pattern, { /* ... */ });
     files.forEach((file) => allFiles.add(file));
   }
-  
+
   return Array.from(allFiles);
 }
 ```
 
 Issues:
+
 - Pattern matching is sequential
 - Multiple patterns = multiple glob calls
 - No deduplication optimization
 
 **Optimization:**
+
 ```typescript
 // Combine patterns, single glob call
 const patterns = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'];
-const files = await glob(
-  '{' + patterns.join(',') + '}',
-  { /* ... */ }
-);
+const files = await glob('{' + patterns.join(',') + '}', {
+  /* ... */
+});
 ```
 
 Saves ~20-30% on file discovery time.
@@ -301,13 +324,13 @@ Saves ~20-30% on file discovery time.
 
 ### 2.2 Performance Summary Table
 
-| Bottleneck | Severity | Fix Complexity | Gain |
-|---|---|---|---|
-| No caching | CRITICAL | Medium | 60-80% |
-| Sequential parsing | HIGH | Medium | 3-8x |
-| Empty getDependencies() | CRITICAL | High | Unlocks features |
-| Layer lookup O(n·m·k) | MEDIUM | Low | 10-20% |
-| Sequential glob | LOW | Low | 5-10% |
+| Bottleneck              | Severity | Fix Complexity | Gain             |
+| ----------------------- | -------- | -------------- | ---------------- |
+| No caching              | CRITICAL | Medium         | 60-80%           |
+| Sequential parsing      | HIGH     | Medium         | 3-8x             |
+| Empty getDependencies() | CRITICAL | High           | Unlocks features |
+| Layer lookup O(n·m·k)   | MEDIUM   | Low            | 10-20%           |
+| Sequential glob         | LOW      | Low            | 5-10%            |
 
 ---
 
@@ -318,13 +341,19 @@ Saves ~20-30% on file discovery time.
 **COMPLETELY MISSING:**
 
 1. **Transitive Dependency Checking**
+
    ```typescript
    // Can't check this now:
-   rule.classes().that().resideInPackage('api')
-       .should().notDependOnClassesThat().resideInPackage('db');
+   rule
+     .classes()
+     .that()
+     .resideInPackage('api')
+     .should()
+     .notDependOnClassesThat()
+     .resideInPackage('db');
    // Because getDependencies() returns []
    ```
-   
+
    Should support:
    - Direct dependencies
    - Transitive dependencies (A→B→C means A depends on C)
@@ -337,6 +366,7 @@ Saves ~20-30% on file discovery time.
    - Currently ignores `@types/` imports
 
 3. **Dependency Metrics**
+
    ```typescript
    analyzer.getMetrics() → {
      mostUsedClass: 'UserService' (imported 42 times),
@@ -364,6 +394,7 @@ Saves ~20-30% on file discovery time.
 **Limited Rule Coverage:**
 
 Current:
+
 - ✅ Package-based
 - ✅ Naming convention
 - ✅ Decorator/annotation
@@ -405,6 +436,7 @@ rule.classes().that().resideInPackage('order')
 ### 3.3 Advanced Architecture Pattern Support
 
 **Currently:**
+
 - ✅ Layered (basic)
 - ✅ Onion (skeleton only)
 - ❌ Clean Architecture patterns
@@ -452,6 +484,7 @@ const pluginArch = Architectures.pluginArchitecture()
 **Currently:** Only analyzes classes and basic decorators
 
 **Missing:**
+
 - Interface contracts
 - Type definitions
 - Generic type parameters
@@ -460,14 +493,17 @@ const pluginArch = Architectures.pluginArchitecture()
 
 ```typescript
 // Should support:
-rule.interfaces().that().extend('BaseEntity')
-    .should().beImplementedByClassesThat().resideInPackage('models');
+rule
+  .interfaces()
+  .that()
+  .extend('BaseEntity')
+  .should()
+  .beImplementedByClassesThat()
+  .resideInPackage('models');
 
-rule.classes().that().implement('Logger')
-    .should().havePublicMethod('log');
+rule.classes().that().implement('Logger').should().havePublicMethod('log');
 
-rule.functions().that().haveParameterType('User')
-    .should().onlyBeCalledFrom('services');
+rule.functions().that().haveParameterType('User').should().onlyBeCalledFrom('services');
 ```
 
 ---
@@ -477,6 +513,7 @@ rule.functions().that().haveParameterType('User')
 **Missing:**
 
 1. **Rule Debugging**
+
    ```typescript
    rule.debug() → {
      matchedClasses: [...],
@@ -487,6 +524,7 @@ rule.functions().that().haveParameterType('User')
    ```
 
 2. **Violation Explanation**
+
    ```typescript
    violation.explainWhy() → {
      reason: 'Package constraint violated',
@@ -497,6 +535,7 @@ rule.functions().that().haveParameterType('User')
    ```
 
 3. **Rule Coverage Analysis**
+
    ```typescript
    analyzer.getCoverageFor(rule) → {
      uncoveredClasses: [...],
@@ -526,56 +565,52 @@ The fluent API is good but restrictive:
 
 ```typescript
 // Currently supported:
-rule.classes()
-  .that()
-  .haveSimpleNameEndingWith('Service')
-  .should()
-  .resideInPackage('services');
+rule.classes().that().haveSimpleNameEndingWith('Service').should().resideInPackage('services');
 
 // NOT supported:
-rule.classes()
+rule
+  .classes()
   .that()
   .haveSimpleNameEndingWith('Service')
-  .or()  // ← Missing OR combinator
+  .or() // ← Missing OR combinator
   .haveSimpleNameEndingWith('Handler')
   .should()
   .resideInPackage('services');
 
 // NOT supported:
-rule.classes()
+rule
+  .classes()
   .that()
-  .haveCustomProperty(c => c.methods.length > 10)  // ← Custom predicates
+  .haveCustomProperty((c) => c.methods.length > 10) // ← Custom predicates
   .should()
   .beDecomposed();
 
 // NOT supported:
-rule.classes()
-  .that()
-  .resideInPackage('services')
-  .should()
-  .respectLayeredArchitecture(architecture);  // ← Composition
+rule.classes().that().resideInPackage('services').should().respectLayeredArchitecture(architecture); // ← Composition
 ```
 
 ### 4.2 Proposed API Enhancements
 
 **A. Logical Combinators:**
+
 ```typescript
-rule.classes()
+rule
+  .classes()
   .that()
   .resideInPackage('api')
-  .or()  // OR
+  .or() // OR
   .areAnnotatedWith('Public')
-  .and()  // AND
+  .and() // AND
   .haveSimpleNameMatching(/API.*/i)
   .should()
   .resideInPackage('public-api');
 
 // Advanced:
-rule.classes()
+rule
+  .classes()
   .that()
-  .satisfies(c => 
-    (c.methods.length > 5 && c.name.endsWith('Service'))
-    || c.isAnnotatedWith('Heavy')
+  .satisfies(
+    (c) => (c.methods.length > 5 && c.name.endsWith('Service')) || c.isAnnotatedWith('Heavy')
   )
   .should()
   .notDependOnClassesThat()
@@ -583,31 +618,35 @@ rule.classes()
 ```
 
 **B. Custom Predicate Functions:**
+
 ```typescript
-rule.classes()
+rule
+  .classes()
   .that()
-  .match(cls => {
+  .match((cls) => {
     // Full control over matching logic
-    return cls.methods.some(m => m.name === 'validate')
-      && cls.properties.length < 20;
+    return cls.methods.some((m) => m.name === 'validate') && cls.properties.length < 20;
   })
   .should()
   .resideInPackage('validators');
 
 // With metadata:
-rule.classes()
+rule
+  .classes()
   .that()
-  .matchWithReason(cls => ({
+  .matchWithReason((cls) => ({
     matches: cls.isAbstract,
-    reason: 'Abstract base classes'
+    reason: 'Abstract base classes',
   }))
   .should()
   .beProperlyDocumented();
 ```
 
 **C. Multi-Part Conditions:**
+
 ```typescript
-const rule = rule.classes()
+const rule = rule
+  .classes()
   .that()
   .resideInPackage('models')
   .should()
@@ -619,12 +658,11 @@ const rule = rule.classes()
   .implementInterface('BaseModel');
 
 // Chained checks
-rule.check(classes)
-  .andAlso(rule2.check(classes))
-  .andAlso(rule3.check(classes));
+rule.check(classes).andAlso(rule2.check(classes)).andAlso(rule3.check(classes));
 ```
 
 **D. Composition with Operators:**
+
 ```typescript
 const rule1 = /* ... */;
 const rule2 = /* ... */;
@@ -644,28 +682,32 @@ const weightedRule = ArchRuleDefinition.compose()
 ```
 
 **E. Exception/Suppression Mechanism:**
+
 ```typescript
-rule.classes()
+rule
+  .classes()
   .that()
   .resideInPackage('api')
-  .except('LegacyClass')  // ← Whitelist specific classes
+  .except('LegacyClass') // ← Whitelist specific classes
   .should()
   .notDependOnClassesThat()
   .resideInPackage('db');
 
 // Pattern-based exception
-rule.classes()
+rule
+  .classes()
   .that()
   .resideInPackage('services')
-  .exceptMatching(/Test.*/)  // ← Exception patterns
+  .exceptMatching(/Test.*/) // ← Exception patterns
   .should()
   .respectNamingConvention();
 
 // Conditional exception
-rule.classes()
+rule
+  .classes()
   .that()
   .resideInPackage('legacy')
-  .exceptIf(c => c.isAnnotatedWith('Deprecated'))
+  .exceptIf((c) => c.isAnnotatedWith('Deprecated'))
   .should()
   .followNewArchitecture();
 ```
@@ -675,12 +717,14 @@ rule.classes()
 ### 4.3 API Documentation & Discovery
 
 **Missing:**
+
 - No way to discover available rule methods at runtime
 - No rule validation before checking
 - Limited error messages
 - No type hints for rule builders
 
 **Add introspection:**
+
 ```typescript
 const availableRules = ArchRuleDefinition.availableRules();
 // → ['resideInPackage', 'areAnnotatedWith', 'haveSimpleNameMatching', ...]
@@ -706,6 +750,7 @@ rule.validateBeforeCheck() → {
 **1. TypeScript Compiler Integration**
 
 Currently uses `typescript-eslint` parser. Missing full TypeScript support:
+
 ```typescript
 // Should integrate with TypeScript compiler for:
 - Type resolution
@@ -723,6 +768,7 @@ const typeChecker = program.getTypeChecker();
 **2. IDE Integration**
 
 No LSP (Language Server Protocol) support:
+
 ```typescript
 // Could provide:
 - Real-time rule violation as-you-code
@@ -734,6 +780,7 @@ No LSP (Language Server Protocol) support:
 **3. CI/CD Integration**
 
 Currently manual API usage. Missing:
+
 - CLI tool
 - GitHub Actions integration
 - Pre-commit hooks
@@ -742,13 +789,14 @@ Currently manual API usage. Missing:
 **4. Metrics Export**
 
 No metrics reporting:
+
 ```typescript
 analyzer.exportMetrics({
   format: 'json|html|csv',
   includeComplexity: true,
   includeDependencyGraph: true,
-  visualization: 'dag|treemap|sunburst'
-})
+  visualization: 'dag|treemap|sunburst',
+});
 ```
 
 ---
@@ -758,11 +806,12 @@ analyzer.exportMetrics({
 **1. Incremental Analysis**
 
 Should track changes:
+
 ```typescript
 analyzer.watch(basePath, (changes: FileChanges) => {
   // Only re-analyze changed files
   const affected = analyzer.reanalyzeAfterChanges(changes);
-  
+
   // Only re-check rules that might be affected
   const relevantViolations = rule.checkAffected(affected);
 });
@@ -771,6 +820,7 @@ analyzer.watch(basePath, (changes: FileChanges) => {
 **2. Snapshot Comparison**
 
 For trend tracking:
+
 ```typescript
 const snapshot1 = await analyzer.takeSnapshot();
 // ... code changes ...
@@ -784,11 +834,12 @@ console.log(`Architecture improved: ${diff.fixedViolations.length}`);
 **3. Historical Tracking**
 
 Database of violations:
+
 ```typescript
 const history = analyzer.getHistory(basePath);
-console.log(history.violations.overTime());  // Graph data
-console.log(history.getWorstOffenders());     // Top violations
-console.log(history.getTrends());             // Improving/worsening
+console.log(history.violations.overTime()); // Graph data
+console.log(history.getWorstOffenders()); // Top violations
+console.log(history.getTrends()); // Improving/worsening
 ```
 
 ---
@@ -812,7 +863,7 @@ rule.classes()
   .beRefactored();
 
 // Custom matchers
-ArchUnitTS.registerMatcher('isController', 
+ArchUnitTS.registerMatcher('isController',
   (cls: TSClass) => cls.isAnnotatedWith('Controller')
 );
 
@@ -861,12 +912,14 @@ ArchUnitTS.registerViolationFormatter('jira', (v: ArchitectureViolation) => {
 ## 7. IMPLEMENTATION PRIORITY MATRIX
 
 ### High Impact, Low Effort
+
 1. **Complete getDependencies()** - Parse actual imports
 2. **Expose cyclic dependency detection** - Already implemented
 3. **Add rule composition (OR/AND)** - Fluent API extension
 4. **Implement caching layer** - Map-based caching, simple logic
 
 ### High Impact, Medium Effort
+
 1. **Parallel file parsing** - Promise.all with batching
 2. **Proper module resolution** - Implement TypeScript's algorithm
 3. **Transitive dependency checking** - Graph algorithms
@@ -874,6 +927,7 @@ ArchUnitTS.registerViolationFormatter('jira', (v: ArchitectureViolation) => {
 5. **CLI tool with reporting** - Standalone executable
 
 ### High Impact, High Effort
+
 1. **Full TypeScript compiler integration** - Use ts.Program
 2. **IDE/LSP support** - Language server protocol
 3. **Incremental analysis** - Change tracking + snapshot storage
@@ -881,6 +935,7 @@ ArchUnitTS.registerViolationFormatter('jira', (v: ArchitectureViolation) => {
 5. **Advanced pattern detection** - ML/heuristic-based patterns
 
 ### Lower Priority
+
 1. **Visualization tools** - Graph rendering
 2. **Performance profiling** - Benchmarking utilities
 3. **Plugin system** - Custom rule registration
@@ -891,9 +946,11 @@ ArchUnitTS.registerViolationFormatter('jira', (v: ArchitectureViolation) => {
 ## 8. SPECIFIC CODE RECOMMENDATIONS
 
 ### Issue #1: Implement Dependency Resolution
+
 **File:** `src/core/TSClass.ts` line 87-90
 
 Current:
+
 ```typescript
 public getDependencies(): string[] {
   // This will be populated by the analyzer
@@ -902,6 +959,7 @@ public getDependencies(): string[] {
 ```
 
 Should be:
+
 ```typescript
 private dependencies: Map<string, DependencyType> = new Map();
 
@@ -917,15 +975,17 @@ public addDependency(target: string, type: DependencyType): void {
 ---
 
 ### Issue #2: Add Caching to CodeAnalyzer
+
 **File:** `src/analyzer/CodeAnalyzer.ts`
 
 Add:
+
 ```typescript
 export class CodeAnalyzer {
   private parser: TypeScriptParser;
   private modules: Map<string, TSModule>;
   private dependencies: Dependency[];
-  
+
   // Add these caches:
   private astCache: Map<string, { hash: string; ast: TSESTree.Program }> = new Map();
   private analysisCache: Map<string, TSClasses> = new Map();
@@ -938,7 +998,7 @@ export class CodeAnalyzer {
   private getCachedModule(filePath: string): TSModule | null {
     const currentHash = this.hashFile(filePath);
     const cached = this.fileHashCache.get(filePath);
-    
+
     if (cached === currentHash) {
       return this.modules.get(filePath) || null;
     }
@@ -950,9 +1010,11 @@ export class CodeAnalyzer {
 ---
 
 ### Issue #3: Expose Cyclic Dependency Detection
+
 **File:** `src/analyzer/CodeAnalyzer.ts` line 123-156
 
 The code exists but is private and incomplete. Should:
+
 1. Make `findCyclicDependencies()` public
 2. Fix the DFS algorithm (currently has bugs)
 3. Export via main API
@@ -960,30 +1022,33 @@ The code exists but is private and incomplete. Should:
 ---
 
 ### Issue #4: Implement DependencyPackageRule
+
 **File:** `src/lang/syntax/ClassesShould.ts` line 214-230
 
 Current:
+
 ```typescript
 class DependencyPackageRule extends BaseArchRule {
   check(): ArchitectureViolation[] {
     const violations: ArchitectureViolation[] = [];
     // This would need to be implemented with actual dependency analysis
-    return violations;  // Always empty!
+    return violations; // Always empty!
   }
 }
 ```
 
 Should check actual dependencies:
+
 ```typescript
 check(): ArchitectureViolation[] {
   const violations: ArchitectureViolation[] = [];
-  
+
   for (const cls of this.classes.getAll()) {
     for (const dep of cls.getDependencies()) {
       const allowedByPattern = this.packagePatterns.some(pattern =>
         minimatch(dep, pattern)
       );
-      
+
       if (!allowedByPattern && this.negated) {
         violations.push(
           this.createViolation(
@@ -995,7 +1060,7 @@ check(): ArchitectureViolation[] {
       }
     }
   }
-  
+
   return violations;
 }
 ```
@@ -1005,18 +1070,21 @@ check(): ArchitectureViolation[] {
 ## 9. METRICS & PERFORMANCE TARGETS
 
 ### Current State (Baseline)
+
 - **Parse time:** 500 files ~2-3 seconds
 - **Memory:** ~50MB for typical codebase
 - **Rule check time:** ~100-200ms per rule
 - **Caching:** None
 
 ### 6-Month Improvement Targets
+
 - **Parse time:** 500 files <300ms (with caching)
 - **Memory:** <30MB (with selective loading)
 - **Rule check time:** <50ms (with caching, parallel)
 - **Caching:** 3-tier cache, 70%+ hit rate
 
 ### Specific Metrics to Track
+
 ```typescript
 type AnalysisMetrics = {
   filesAnalyzed: number;
@@ -1036,12 +1104,14 @@ type AnalysisMetrics = {
 ArchUnit-TS is a **well-designed but incomplete** architecture validation library. The fluent API is excellent, but critical functionality (dependency analysis) is stubbed out, and performance hasn't been considered.
 
 ### Quick Wins (1-2 weeks)
+
 1. Implement `getDependencies()` properly
 2. Add rule composition (OR/AND)
 3. Add simple caching
 4. Expose cyclic dependency detection
 
 ### Medium Term (1-2 months)
+
 1. Parallel file processing
 2. Proper module resolution
 3. 3+ more architecture patterns
@@ -1049,6 +1119,7 @@ ArchUnit-TS is a **well-designed but incomplete** architecture validation librar
 5. HTML report generation
 
 ### Long Term (3-6 months)
+
 1. TypeScript compiler integration
 2. Incremental analysis
 3. IDE/LSP support
@@ -1056,4 +1127,3 @@ ArchUnit-TS is a **well-designed but incomplete** architecture validation librar
 5. Advanced pattern detection
 
 The library has strong fundamentals and could become a production-grade architecture tool with these enhancements.
-

@@ -4,7 +4,7 @@
  * @module cli/ErrorHandler
  */
 
-import { ArchitectureViolation } from '../core/ArchRule';
+import { ArchitectureViolation, Severity } from '../types';
 
 /**
  * CLI Error types
@@ -232,7 +232,9 @@ export class ErrorHandler {
       lines.push(`${dim}Top violating files:${reset}`);
       for (const [file, fileViolations] of topFiles) {
         const shortFile = this.shortenPath(file);
-        lines.push(`  ${dim}•${reset} ${shortFile} ${dim}(${fileViolations.length} violations)${reset}`);
+        lines.push(
+          `  ${dim}•${reset} ${shortFile} ${dim}(${fileViolations.length} violations)${reset}`
+        );
       }
       lines.push('');
     }
@@ -243,29 +245,30 @@ export class ErrorHandler {
   /**
    * Format a single violation
    */
-  formatViolation(violation: ArchitectureViolation, index: number): string {
+  formatViolation(violation: ArchitectureViolation, _index: number): string {
     const { red, yellow, cyan, bright, dim, reset } = this.useColors ? Colors : this.noColors();
 
-    const severityColor = violation.severity === 'error' ? red : yellow;
-    const severityIcon = violation.severity === 'error' ? '✖' : '⚠';
+    const severityColor = violation.severity === Severity.ERROR ? red : yellow;
+    const severityIcon = violation.severity === Severity.ERROR ? '✖' : '⚠';
 
     const lines: string[] = [];
-    lines.push(`${severityColor}${bright}${severityIcon} ${violation.severity?.toUpperCase() || 'ERROR'}${reset}`);
+    lines.push(
+      `${severityColor}${bright}${severityIcon} ${violation.severity?.toUpperCase() || 'ERROR'}${reset}`
+    );
     lines.push(`  ${bright}${violation.message}${reset}`);
 
     if (violation.filePath) {
-      const location = violation.lineNumber
-        ? `${this.shortenPath(violation.filePath)}:${violation.lineNumber}`
+      const location = violation.location
+        ? `${this.shortenPath(violation.filePath)}:${violation.location.line}`
         : this.shortenPath(violation.filePath);
       lines.push(`  ${dim}at ${location}${reset}`);
     }
 
-    if (violation.className) {
-      lines.push(`  ${dim}class: ${cyan}${violation.className}${reset}`);
-    }
-
-    if (violation.codeContext) {
-      lines.push(`  ${dim}${violation.codeContext}${reset}`);
+    // Extract class name from message if available
+    const classNameMatch =
+      violation.message.match(/class '([^']+)'/i) || violation.message.match(/Class '([^']+)'/);
+    if (classNameMatch) {
+      lines.push(`  ${dim}class: ${cyan}${classNameMatch[1]}${reset}`);
     }
 
     return lines.join('\n');
@@ -327,10 +330,13 @@ export class ErrorHandler {
    * Get no-color versions
    */
   private noColors(): typeof Colors {
-    return Object.keys(Colors).reduce((acc, key) => {
-      acc[key as keyof typeof Colors] = '';
-      return acc;
-    }, {} as typeof Colors);
+    return Object.keys(Colors).reduce(
+      (acc, key) => {
+        acc[key as keyof typeof Colors] = '';
+        return acc;
+      },
+      {} as typeof Colors
+    );
   }
 }
 
