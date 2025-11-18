@@ -379,7 +379,10 @@ describe('Performance Tests', () => {
       // Should scale close to linearly (within 2x of expected)
       expect(ratio).toBeLessThan(expectedRatio * 2);
 
-      fs.rmdirSync(tempDir);
+      // Clean up temporary directory
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   });
 });

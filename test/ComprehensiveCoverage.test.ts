@@ -22,7 +22,9 @@ import {
   ReportManager,
   createReportManager,
 } from '../src/reports';
+import { ReportFormat } from '../src/reports/types';
 import { RuleComposer } from '../src/composition/RuleComposer';
+import { Severity } from '../src/types';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -233,22 +235,16 @@ describe('Comprehensive Coverage Tests', () => {
       expect(violations.length).toBe(0);
     });
 
-    it('should validate classes reside in any package', () => {
+    it('should validate dependency rules - only depend on classes in any package', () => {
       const rule = ArchRuleDefinition.classes()
+        .that()
+        .resideInPackage('controllers')
         .should()
-        .resideInAnyPackage('services', 'controllers', 'models', 'repositories');
+        .onlyDependOnClassesThat()
+        .resideInAnyPackage('services', 'models');
 
       const violations = rule.check(testClasses);
       expect(Array.isArray(violations)).toBe(true);
-    });
-
-    it('should validate classes not reside in any package', () => {
-      const rule = ArchRuleDefinition.classes()
-        .should()
-        .notResideInAnyPackage('bad-package', 'another-bad-package');
-
-      const violations = rule.check(testClasses);
-      expect(violations.length).toBe(0);
     });
 
     it('should validate classes be assignable to type', () => {
@@ -273,13 +269,13 @@ describe('Comprehensive Coverage Tests', () => {
       expect(violations.length).toBe(0);
     });
 
-    it('should validate dependency rules - depend on classes that', () => {
+    it('should validate dependency rules - services should only depend on models', () => {
       const rule = ArchRuleDefinition.classes()
         .that()
-        .resideInPackage('controllers')
+        .resideInPackage('services')
         .should()
-        .dependOnClassesThat()
-        .resideInAnyPackage('services', 'models');
+        .onlyDependOnClassesThat()
+        .resideInPackage('models');
 
       const violations = rule.check(testClasses);
       expect(Array.isArray(violations)).toBe(true);
@@ -313,34 +309,30 @@ describe('Comprehensive Coverage Tests', () => {
   describe('ViolationFormatter - Comprehensive Coverage', () => {
     it('should format single violation', () => {
       const violation = {
-        ruleName: 'Test Rule',
+        rule: 'Test Rule',
         message: 'Test message',
         filePath: '/test/file.ts',
-        className: 'TestClass',
-        severity: 'error' as const,
+        severity: Severity.ERROR,
       };
 
       const formatted = formatViolation(violation);
       expect(formatted).toContain('Test Rule');
       expect(formatted).toContain('Test message');
-      expect(formatted).toContain('TestClass');
     });
 
     it('should format multiple violations', () => {
       const violations = [
         {
-          ruleName: 'Rule 1',
+          rule: 'Rule 1',
           message: 'Message 1',
           filePath: '/test/file1.ts',
-          className: 'Class1',
-          severity: 'error' as const,
+          severity: Severity.ERROR,
         },
         {
-          ruleName: 'Rule 2',
+          rule: 'Rule 2',
           message: 'Message 2',
           filePath: '/test/file2.ts',
-          className: 'Class2',
-          severity: 'warning' as const,
+          severity: Severity.WARNING,
         },
       ];
 
@@ -352,11 +344,10 @@ describe('Comprehensive Coverage Tests', () => {
     it('should format summary', () => {
       const violations = [
         {
-          ruleName: 'Rule',
+          rule: 'Rule',
           message: 'Message',
           filePath: '/test/file.ts',
-          className: 'Class',
-          severity: 'error' as const,
+          severity: Severity.ERROR,
         },
       ];
 
@@ -364,152 +355,159 @@ describe('Comprehensive Coverage Tests', () => {
       expect(summary).toContain('1');
     });
 
-    it('should use ViolationFormatter class', () => {
-      const formatter = new ViolationFormatter();
+    it('should format with ViolationFormatter static method', () => {
       const violation = {
-        ruleName: 'Test',
+        rule: 'Test',
         message: 'Test',
         filePath: '/test.ts',
-        className: 'Test',
-        severity: 'error' as const,
+        severity: Severity.ERROR,
       };
 
-      const formatted = formatter.format(violation);
+      const formatted = ViolationFormatter.formatViolation(violation);
       expect(typeof formatted).toBe('string');
+      expect(formatted).toContain('Test');
     });
 
     it('should format with color options', () => {
-      const formatter = new ViolationFormatter({ useColors: true });
       const violation = {
-        ruleName: 'Test',
+        rule: 'Test',
         message: 'Test',
         filePath: '/test.ts',
-        className: 'Test',
-        severity: 'error' as const,
+        severity: Severity.ERROR,
       };
 
-      const formatted = formatter.format(violation);
+      const formatted = ViolationFormatter.formatViolation(violation, { colors: true });
       expect(typeof formatted).toBe('string');
     });
 
     it('should format without color options', () => {
-      const formatter = new ViolationFormatter({ useColors: false });
       const violation = {
-        ruleName: 'Test',
+        rule: 'Test',
         message: 'Test',
         filePath: '/test.ts',
-        className: 'Test',
-        severity: 'warning' as const,
+        severity: Severity.WARNING,
       };
 
-      const formatted = formatter.format(violation);
+      const formatted = ViolationFormatter.formatViolation(violation, { colors: false });
       expect(typeof formatted).toBe('string');
       expect(formatted).not.toContain('\x1b');
     });
 
-    it('should format multiple violations with formatter', () => {
-      const formatter = new ViolationFormatter();
+    it('should format multiple violations with formatter static method', () => {
       const violations = [
         {
-          ruleName: 'R1',
+          rule: 'R1',
           message: 'M1',
           filePath: '/t1.ts',
-          className: 'C1',
-          severity: 'error' as const,
+          severity: Severity.ERROR,
         },
         {
-          ruleName: 'R2',
+          rule: 'R2',
           message: 'M2',
           filePath: '/t2.ts',
-          className: 'C2',
-          severity: 'info' as const,
+          severity: Severity.WARNING,
         },
       ];
 
-      const formatted = formatter.formatAll(violations);
+      const formatted = ViolationFormatter.formatViolations(violations);
       expect(formatted).toContain('R1');
       expect(formatted).toContain('R2');
     });
 
-    it('should format summary with formatter', () => {
-      const formatter = new ViolationFormatter();
+    it('should format summary with formatter static method', () => {
       const violations = [
         {
-          ruleName: 'R',
+          rule: 'R',
           message: 'M',
           filePath: '/t.ts',
-          className: 'C',
-          severity: 'error' as const,
+          severity: Severity.ERROR,
         },
       ];
 
-      const summary = formatter.formatSummary(violations);
+      const summary = ViolationFormatter.formatSummary(violations);
       expect(summary).toContain('1');
     });
   });
 
   describe('RuleTemplates - Coverage', () => {
-    it('should provide naming conventions template', () => {
-      expect(RuleTemplates.namingConventions).toBeDefined();
+    it('should provide DTO naming convention template', () => {
+      expect(RuleTemplates.dtoNamingConvention).toBeDefined();
+      const rule = RuleTemplates.dtoNamingConvention();
+      expect(rule).toBeDefined();
     });
 
-    it('should provide layered architecture template', () => {
-      expect(RuleTemplates.layeredArchitecture).toBeDefined();
+    it('should provide service naming convention template', () => {
+      expect(RuleTemplates.serviceNamingConvention).toBeDefined();
+      const rule = RuleTemplates.serviceNamingConvention();
+      expect(rule).toBeDefined();
     });
 
-    it('should provide dependency rules template', () => {
-      expect(RuleTemplates.dependencyRules).toBeDefined();
-    });
-
-    it('should provide package organization template', () => {
-      expect(RuleTemplates.packageOrganization).toBeDefined();
+    it('should provide controller naming convention template', () => {
+      expect(RuleTemplates.controllerNamingConvention).toBeDefined();
+      const rule = RuleTemplates.controllerNamingConvention();
+      expect(rule).toBeDefined();
     });
   });
 
   describe('Report Generators - Comprehensive Coverage', () => {
     const sampleViolations = [
       {
-        ruleName: 'Test Rule',
+        rule: 'Test Rule',
         message: 'Test violation',
         filePath: '/test/file.ts',
-        className: 'TestClass',
-        severity: 'error' as const,
+        severity: Severity.ERROR,
       },
     ];
 
     const reportData = {
       violations: sampleViolations,
-      totalViolations: 1,
-      rulesChecked: 1,
-      filesAnalyzed: 1,
-      timestamp: new Date().toISOString(),
+      metadata: {
+        title: 'Test Report',
+        timestamp: new Date().toISOString(),
+        totalViolations: 1,
+        totalFiles: 1,
+        rulesChecked: 1,
+        ruleResults: [],
+      },
     };
 
     it('should generate HTML report', () => {
       const generator = new HtmlReportGenerator();
-      const html = generator.generate(reportData);
+      const html = generator.generate(reportData, {
+        format: ReportFormat.HTML,
+        outputPath: '/tmp/report.html',
+      });
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('Test Rule');
     });
 
     it('should generate JSON report', () => {
       const generator = new JsonReportGenerator();
-      const json = generator.generate(reportData);
+      const json = generator.generate(reportData, {
+        format: ReportFormat.JSON,
+        outputPath: '/tmp/report.json',
+      });
       expect(json).toContain('"violations"');
       expect(json).toContain('Test Rule');
     });
 
     it('should generate JUnit report', () => {
       const generator = new JUnitReportGenerator();
-      const xml = generator.generate(reportData);
+      const xml = generator.generate(reportData, {
+        format: ReportFormat.JUNIT,
+        outputPath: '/tmp/report.xml',
+      });
       expect(xml).toContain('<?xml version');
       expect(xml).toContain('testsuites');
     });
 
     it('should generate Markdown report', () => {
       const generator = new MarkdownReportGenerator();
-      const md = generator.generate(reportData);
-      expect(md).toContain('# Architecture Violations Report');
+      const md = generator.generate(reportData, {
+        format: ReportFormat.MARKDOWN,
+        outputPath: '/tmp/report.md',
+      });
+      expect(md).toContain('# ArchUnit Architecture Report');
       expect(md).toContain('Test Rule');
     });
 
@@ -596,11 +594,13 @@ describe('Comprehensive Coverage Tests', () => {
     });
 
     it('should compose rules with not', () => {
-      const rule = ArchRuleDefinition.classes().should().resideInPackage('bad-package');
+      const rule = ArchRuleDefinition.classes().should().resideInPackage('services');
 
       const composedRule = RuleComposer.not(rule);
       const violations = composedRule.check(testClasses);
-      expect(violations.length).toBe(0);
+      // NOT rule should invert: classes that DON'T reside in 'services'
+      // Since our test fixture has classes in services, the NOT rule should find violations
+      expect(violations.length).toBeGreaterThan(0);
     });
 
     it('should compose rules with xor', () => {
