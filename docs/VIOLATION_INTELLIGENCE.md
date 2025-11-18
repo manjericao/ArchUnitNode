@@ -143,6 +143,7 @@ for (const violation of enhanced) {
 ### Impact Scoring
 
 Violations are scored 0-100 based on:
+
 - Severity (error = +30, warning = +10)
 - Category (security = +20, layering = +15, dependency = +10, naming = +5)
 - Base score = 50
@@ -323,18 +324,14 @@ Generates intelligent fix suggestions.
 import { ArchUnitTS, ViolationAnalyzer } from 'archunit-ts';
 
 const archunit = new ArchUnitTS();
-const violations = await archunit.checkRules('./src', [
-  layeringRule,
-  namingRule,
-  dependencyRule
-]);
+const violations = await archunit.checkRules('./src', [layeringRule, namingRule, dependencyRule]);
 
 if (violations.length > 0) {
   const analyzer = new ViolationAnalyzer(violations);
   const analysis = analyzer.analyze();
 
   // Fail build if high-impact violations
-  const criticalViolations = analysis.topPriority.filter(v => v.impactScore! > 80);
+  const criticalViolations = analysis.topPriority.filter((v) => v.impactScore! > 80);
 
   if (criticalViolations.length > 0) {
     console.error(`❌ ${criticalViolations.length} critical violations found`);
@@ -359,18 +356,18 @@ const report = {
   summary: {
     total: analysis.total,
     rootCauses: analysis.uniqueRootCauses,
-    criticalCount: analysis.topPriority.filter(v => v.impactScore! > 80).length
+    criticalCount: analysis.topPriority.filter((v) => v.impactScore! > 80).length,
   },
   categories: Object.fromEntries(
     Array.from(analysis.byCategory.entries()).map(([cat, viols]) => [cat, viols.length])
   ),
   hotspots: analysis.hotspotFiles,
-  groups: analysis.groups.map(g => ({
+  groups: analysis.groups.map((g) => ({
     cause: g.rootCause,
     count: g.count,
     impact: g.groupImpactScore,
-    fix: g.groupFix
-  }))
+    fix: g.groupFix,
+  })),
 };
 
 // Send to monitoring/dashboards
@@ -402,8 +399,10 @@ for (const group of groups) {
 const analysis = analyzer.analyze();
 
 // Fix high-impact violations first
-const highImpact = analysis.topPriority.filter(v => v.impactScore! > 70);
-const mediumImpact = analysis.topPriority.filter(v => v.impactScore! > 40 && v.impactScore! <= 70);
+const highImpact = analysis.topPriority.filter((v) => v.impactScore! > 70);
+const mediumImpact = analysis.topPriority.filter(
+  (v) => v.impactScore! > 40 && v.impactScore! <= 70
+);
 
 console.log(`Fix these first (high impact): ${highImpact.length}`);
 console.log(`Then fix these (medium impact): ${mediumImpact.length}`);
@@ -415,7 +414,7 @@ console.log(`Then fix these (medium impact): ${mediumImpact.length}`);
 const analysis = analyzer.analyze();
 
 // Refactor files with many violations
-const criticalFiles = analysis.hotspotFiles.filter(h => h.count > 5);
+const criticalFiles = analysis.hotspotFiles.filter((h) => h.count > 5);
 
 if (criticalFiles.length > 0) {
   console.log('These files need refactoring:');
@@ -431,4 +430,4 @@ if (criticalFiles.length > 0) {
 
 - [Rule Composition](./RULE_COMPOSITION.md) - Create complex rules
 - [Architectural Metrics](./ARCHITECTURAL_METRICS.md) - Measure architecture quality
-- [Testing Guide](./TESTING.md) - Test your architecture rules
+- [Testing Guide](./TESTING_UTILITIES.md) - Test your architecture rules

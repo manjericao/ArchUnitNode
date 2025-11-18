@@ -49,6 +49,7 @@ Architectural patterns provide proven solutions for organizing code and enforcin
 Classic N-tier architecture with horizontal layers.
 
 **Structure:**
+
 ```
 ┌─────────────────────────────┐
 │     Presentation Layer      │
@@ -65,26 +66,36 @@ Classic N-tier architecture with horizontal layers.
 import { layeredArchitecture } from 'archunit-ts';
 
 const rule = layeredArchitecture()
-  .layer('Controllers').definedBy('controllers')
-  .layer('Services').definedBy('services')
-  .layer('Repositories').definedBy('repositories')
-  .layer('Models').definedBy('models')
+  .layer('Controllers')
+  .definedBy('controllers')
+  .layer('Services')
+  .definedBy('services')
+  .layer('Repositories')
+  .definedBy('repositories')
+  .layer('Models')
+  .definedBy('models')
 
   // Define access rules
-  .whereLayer('Controllers').mayOnlyAccessLayers('Services', 'Models')
-  .whereLayer('Services').mayOnlyAccessLayers('Repositories', 'Models')
-  .whereLayer('Repositories').mayOnlyAccessLayers('Models')
-  .whereLayer('Models').mayNotAccessLayers('Controllers', 'Services', 'Repositories');
+  .whereLayer('Controllers')
+  .mayOnlyAccessLayers('Services', 'Models')
+  .whereLayer('Services')
+  .mayOnlyAccessLayers('Repositories', 'Models')
+  .whereLayer('Repositories')
+  .mayOnlyAccessLayers('Models')
+  .whereLayer('Models')
+  .mayNotAccessLayers('Controllers', 'Services', 'Repositories');
 
 const violations = rule.check(classes);
 ```
 
 **Key Rules:**
+
 - Upper layers can depend on lower layers
 - Lower layers cannot depend on upper layers
 - Each layer has single responsibility
 
 **Example Project Structure:**
+
 ```
 src/
 ├── controllers/
@@ -102,6 +113,7 @@ src/
 ```
 
 **When to Use:**
+
 - Traditional enterprise applications
 - Simple, well-understood requirements
 - Teams new to architecture patterns
@@ -114,6 +126,7 @@ src/
 Uncle Bob's Clean Architecture with dependency inversion.
 
 **Structure:**
+
 ```
 ┌─────────────────────────────────────┐
 │         Frameworks & Drivers        │
@@ -146,6 +159,7 @@ const violations = rule.check(classes);
 ```
 
 **Key Principles:**
+
 1. **Dependency Rule** - Dependencies point inward only
 2. **Entities** - Enterprise business rules (innermost)
 3. **Use Cases** - Application-specific business rules
@@ -191,6 +205,7 @@ export class CreateUserUseCase {
 ```
 
 **When to Use:**
+
 - Complex business logic
 - Long-lived applications
 - Independent testability required
@@ -203,6 +218,7 @@ export class CreateUserUseCase {
 Isolates core logic from external concerns.
 
 **Structure:**
+
 ```
         ┌─────────────────┐
         │    Adapters     │
@@ -236,6 +252,7 @@ const violations = rule.check(classes);
 ```
 
 **Key Concepts:**
+
 - **Ports** - Interfaces defining communication contracts
 - **Adapters** - Implementations of ports (inbound/outbound)
 - **Domain** - Pure business logic
@@ -282,6 +299,7 @@ export class OrderService {
 ```
 
 **When to Use:**
+
 - Swappable infrastructure
 - Testing without external dependencies
 - Multiple client types (API, CLI, GUI)
@@ -315,6 +333,7 @@ const violations = rule.check(classes);
 Classic pattern for web applications.
 
 **Structure:**
+
 ```
 ┌──────┐       ┌────────────┐       ┌───────┐
 │ View │◄──────│ Controller │──────►│ Model │
@@ -328,15 +347,13 @@ Classic pattern for web applications.
 ```typescript
 import { mvcArchitecture } from 'archunit-ts';
 
-const rule = mvcArchitecture()
-  .models('models')
-  .views('views')
-  .controllers('controllers');
+const rule = mvcArchitecture().models('models').views('views').controllers('controllers');
 
 const violations = rule.check(classes);
 ```
 
 **Key Rules:**
+
 - Models don't depend on Views or Controllers
 - Views don't depend on Controllers
 - Controllers can access both Models and Views
@@ -387,6 +404,7 @@ export class UserController {
 ```
 
 **When to Use:**
+
 - Web applications
 - Server-side rendering
 - Simple to medium complexity
@@ -399,6 +417,7 @@ export class UserController {
 Data binding pattern for rich UIs.
 
 **Structure:**
+
 ```
 ┌──────┐       ┌───────────┐       ┌───────┐
 │ View │◄─────►│ ViewModel │──────►│ Model │
@@ -412,15 +431,13 @@ Data binding pattern for rich UIs.
 ```typescript
 import { mvvmArchitecture } from 'archunit-ts';
 
-const rule = mvvmArchitecture()
-  .models('models')
-  .viewModels('viewmodels')
-  .views('views');
+const rule = mvvmArchitecture().models('models').viewModels('viewmodels').views('views');
 
 const violations = rule.check(classes);
 ```
 
 **Key Rules:**
+
 - Models don't depend on ViewModels or Views
 - ViewModels depend on Models, not Views
 - Views only depend on ViewModels
@@ -479,6 +496,7 @@ export const ProductView = observer(({ viewModel }: { viewModel: ProductViewMode
 ```
 
 **When to Use:**
+
 - Rich client applications (React, Angular, Vue)
 - Two-way data binding
 - Complex UI state management
@@ -491,6 +509,7 @@ export const ProductView = observer(({ viewModel }: { viewModel: ProductViewMode
 Separates reads and writes.
 
 **Structure:**
+
 ```
 Commands ──► Write Model ──► Domain
              (Optimized
@@ -518,6 +537,7 @@ const violations = rule.check(classes);
 ```
 
 **Key Rules:**
+
 - Commands don't return data (void/Promise<void>)
 - Queries don't modify state
 - Commands and Queries are independent
@@ -540,7 +560,8 @@ export class CreateUserCommand {
 export class CreateUserHandler {
   constructor(private writeRepo: UserWriteRepository) {}
 
-  async handle(command: CreateUserCommand): Promise<void> { // ✅ Returns void
+  async handle(command: CreateUserCommand): Promise<void> {
+    // ✅ Returns void
     const user = new User(command.name, command.email);
     await this.writeRepo.save(user);
   }
@@ -557,7 +578,8 @@ export class GetUserByIdQuery {
 export class GetUserByIdHandler {
   constructor(private readRepo: UserReadRepository) {}
 
-  async handle(query: GetUserByIdQuery): Promise<UserDto> { // ✅ Returns data
+  async handle(query: GetUserByIdQuery): Promise<UserDto> {
+    // ✅ Returns data
     return this.readRepo.findById(query.userId);
   }
 }
@@ -577,12 +599,13 @@ export interface UserListItem {
   displayName: string;
   email: string;
   lastLoginDate: Date;
-  orderCount: number;  // Denormalized
-  totalSpent: number;  // Denormalized
+  orderCount: number; // Denormalized
+  totalSpent: number; // Denormalized
 }
 ```
 
 **When to Use:**
+
 - High-traffic systems
 - Different optimization needs for reads/writes
 - Event sourcing
@@ -595,6 +618,7 @@ export interface UserListItem {
 Asynchronous communication via events.
 
 **Structure:**
+
 ```
 Publisher ──► Event Bus ──► Subscriber
               (Events)      (Handler)
@@ -616,6 +640,7 @@ const violations = rule.check(classes);
 ```
 
 **Key Rules:**
+
 - Events are immutable (readonly properties, no setters)
 - Publishers and Subscribers don't directly depend on each other
 - Events have no dependencies on infrastructure
@@ -672,6 +697,7 @@ export class AnalyticsSubscriber {
 ```
 
 **When to Use:**
+
 - Microservices
 - Decoupled systems
 - Asynchronous workflows
@@ -701,6 +727,7 @@ const violations = rule.check(classes);
 ```
 
 **Key DDD Rules:**
+
 - Value Objects don't depend on Entities or Aggregates
 - Entities don't depend on Aggregates
 - Repositories don't depend on Application Services
@@ -782,7 +809,7 @@ export class Customer {
   }
 
   private hasUnpaidOrders(): boolean {
-    return this.orders.some(o => !o.isPaid());
+    return this.orders.some((o) => !o.isPaid());
   }
 }
 
@@ -812,6 +839,7 @@ export class MongoCustomerRepository implements CustomerRepository {
 ```
 
 **When to Use:**
+
 - Complex domain logic
 - Ubiquitous language needed
 - Long-lived projects
@@ -839,6 +867,7 @@ const violations = rule.check(classes);
 ```
 
 **Key Rules:**
+
 - Services can only access Shared Kernel (not other services)
 - API Gateway can access all services
 - Shared Kernel doesn't depend on services
@@ -886,6 +915,7 @@ export class ApiGateway {
 ```
 
 **When to Use:**
+
 - Large teams
 - Independent deployment needed
 - Different scaling requirements per service
@@ -902,7 +932,7 @@ import {
   cleanArchitecture,
   cqrsArchitecture,
   eventDrivenArchitecture,
-  RuleComposer
+  RuleComposer,
 } from 'archunit-ts';
 
 // Clean Architecture + CQRS
@@ -915,7 +945,7 @@ const cleanCqrs = RuleComposer.allOf([
   cqrsArchitecture()
     .commands('application/commands')
     .queries('application/queries')
-    .handlers('application/handlers')
+    .handlers('application/handlers'),
 ]);
 
 // Event-Driven + Microservices
@@ -928,7 +958,7 @@ const eventDrivenMicroservices = RuleComposer.allOf([
   microservicesArchitecture()
     .service('UserService', 'services/user')
     .service('OrderService', 'services/order')
-    .sharedKernel('shared')
+    .sharedKernel('shared'),
 ]);
 ```
 
@@ -980,9 +1010,12 @@ export class MyCustomArchitecture extends BaseArchRule {
 ```typescript
 // ✅ GOOD: Start with basic layered architecture
 const rule = layeredArchitecture()
-  .layer('API').definedBy('api')
-  .layer('Business').definedBy('business')
-  .layer('Data').definedBy('data');
+  .layer('API')
+  .definedBy('api')
+  .layer('Business')
+  .definedBy('business')
+  .layer('Data')
+  .definedBy('data');
 ```
 
 ### 2. Evolve Gradually
@@ -990,10 +1023,14 @@ const rule = layeredArchitecture()
 ```typescript
 // As complexity grows, add more layers
 const rule = layeredArchitecture()
-  .layer('Controllers').definedBy('api/controllers')
-  .layer('Services').definedBy('business/services')
-  .layer('Domain').definedBy('business/domain')
-  .layer('Repositories').definedBy('data/repositories');
+  .layer('Controllers')
+  .definedBy('api/controllers')
+  .layer('Services')
+  .definedBy('business/services')
+  .layer('Domain')
+  .definedBy('business/domain')
+  .layer('Repositories')
+  .definedBy('data/repositories');
 ```
 
 ### 3. Test Early
@@ -1057,31 +1094,31 @@ const rule = createMyProjectArchitecture();
 
 ```typescript
 // Layered Architecture
-function layeredArchitecture(): LayeredArchitecture
+function layeredArchitecture(): LayeredArchitecture;
 
 // Clean Architecture
-function cleanArchitecture(): CleanArchitecture
+function cleanArchitecture(): CleanArchitecture;
 
 // Hexagonal/Ports & Adapters
-function portsAndAdaptersArchitecture(): PortsAndAdaptersArchitecture
+function portsAndAdaptersArchitecture(): PortsAndAdaptersArchitecture;
 
 // MVC
-function mvcArchitecture(): MVCArchitecture
+function mvcArchitecture(): MVCArchitecture;
 
 // MVVM
-function mvvmArchitecture(): MVVMArchitecture
+function mvvmArchitecture(): MVVMArchitecture;
 
 // CQRS
-function cqrsArchitecture(): CQRSArchitecture
+function cqrsArchitecture(): CQRSArchitecture;
 
 // Event-Driven
-function eventDrivenArchitecture(): EventDrivenArchitecture
+function eventDrivenArchitecture(): EventDrivenArchitecture;
 
 // DDD
-function dddArchitecture(): DDDArchitecture
+function dddArchitecture(): DDDArchitecture;
 
 // Microservices
-function microservicesArchitecture(): MicroservicesArchitecture
+function microservicesArchitecture(): MicroservicesArchitecture;
 ```
 
 ### Common Methods
@@ -1129,17 +1166,27 @@ See individual pattern sections for detailed APIs and examples.
 import { layeredArchitecture, ArchUnitTS } from 'archunit-ts';
 
 const rule = layeredArchitecture()
-  .layer('Routes').definedBy('routes')
-  .layer('Controllers').definedBy('controllers')
-  .layer('Services').definedBy('services')
-  .layer('Models').definedBy('models')
-  .layer('Database').definedBy('database')
+  .layer('Routes')
+  .definedBy('routes')
+  .layer('Controllers')
+  .definedBy('controllers')
+  .layer('Services')
+  .definedBy('services')
+  .layer('Models')
+  .definedBy('models')
+  .layer('Database')
+  .definedBy('database')
 
-  .whereLayer('Routes').mayOnlyAccessLayers('Controllers')
-  .whereLayer('Controllers').mayOnlyAccessLayers('Services', 'Models')
-  .whereLayer('Services').mayOnlyAccessLayers('Models', 'Database')
-  .whereLayer('Models').mayNotAccessLayers('Routes', 'Controllers', 'Services', 'Database')
-  .whereLayer('Database').mayOnlyAccessLayers('Models');
+  .whereLayer('Routes')
+  .mayOnlyAccessLayers('Controllers')
+  .whereLayer('Controllers')
+  .mayOnlyAccessLayers('Services', 'Models')
+  .whereLayer('Services')
+  .mayOnlyAccessLayers('Models', 'Database')
+  .whereLayer('Models')
+  .mayNotAccessLayers('Routes', 'Controllers', 'Services', 'Database')
+  .whereLayer('Database')
+  .mayOnlyAccessLayers('Models');
 
 const archUnit = new ArchUnitTS();
 const violations = await archUnit.checkRule('./src', rule);
@@ -1190,7 +1237,7 @@ const combined = RuleComposer.allOf([microservicesRule, eventRule]);
 - [Rule Composition](./RULE_COMPOSITION.md) - Combine patterns with logical operators
 - [Violation Intelligence](./VIOLATION_INTELLIGENCE.md) - Smart violation analysis
 - [Architectural Metrics](./ARCHITECTURAL_METRICS.md) - Measure architecture quality
-- [Testing Guide](./TESTING.md) - Test your architectural rules
+- [Testing Guide](./TESTING_UTILITIES.md) - Test your architectural rules
 
 ---
 

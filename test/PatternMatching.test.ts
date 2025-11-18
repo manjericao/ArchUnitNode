@@ -127,12 +127,13 @@ describe('Pattern Matching', () => {
       fs.writeFileSync(path.join(level2Dir, 'Level2.ts'), 'export class Level2 {}', 'utf-8');
 
       const classes = analyzer.analyze(tempDir).then((result) => {
-        // * should match only one level
-        const singleLevel = result.resideInPackage('temp-wildcard/*/');
+        // * should match only one level - looking for files in level1 directory
+        const singleLevel = result.resideInPackage('level1');
 
         const classNames = singleLevel.getAll().map((c) => c.name);
         // Should match level1 but not level2
         expect(classNames).toContain('Level1');
+        expect(classNames).not.toContain('Level2');
 
         // Cleanup
         fs.unlinkSync(path.join(level1Dir, 'Level1.ts'));

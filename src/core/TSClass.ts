@@ -61,7 +61,99 @@ export class TSClass {
     // Convert package pattern to path pattern
     // e.g., "com.example.services" -> "com/example/services"
     const pathPattern = packagePattern.replace(/\./g, '/');
-    return this.module.includes(pathPattern) || this.filePath.includes(pathPattern);
+
+    // Normalize paths for comparison (handle both / and \)
+    const normalizedModule = this.module.replace(/\\/g, '/');
+    const normalizedFilePath = this.filePath.replace(/\\/g, '/');
+    const normalizedPattern = pathPattern.replace(/\\/g, '/');
+
+    // Check if the pattern matches as a complete path segment
+    // This prevents "services" from matching "services-impl"
+    const moduleSegments = normalizedModule.split('/');
+    const filePathSegments = normalizedFilePath.split('/');
+    const patternSegments = normalizedPattern.split('/');
+
+    // Check if pattern segments appear consecutively in the path
+    const matchesInModule = this.matchesPathSegments(moduleSegments, patternSegments);
+    const matchesInFilePath = this.matchesPathSegments(filePathSegments, patternSegments);
+
+    return matchesInModule || matchesInFilePath;
+  }
+
+  /**
+   * Check if pattern segments match consecutively in path segments
+   */
+  private matchesPathSegments(pathSegments: string[], patternSegments: string[]): boolean {
+    // Handle wildcard patterns
+    if (patternSegments.includes('**')) {
+      return this.matchesWithDoubleWildcard(pathSegments, patternSegments);
+    }
+
+    // For single wildcard or exact matches
+    for (let i = 0; i <= pathSegments.length - patternSegments.length; i++) {
+      let matches = true;
+      for (let j = 0; j < patternSegments.length; j++) {
+        const patternSeg = patternSegments[j];
+        const pathSeg = pathSegments[i + j];
+
+        if (patternSeg === '*') {
+          // * matches any single segment
+          continue;
+        } else if (patternSeg !== pathSeg) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Match path with double wildcard pattern
+   */
+  private matchesWithDoubleWildcard(pathSegments: string[], patternSegments: string[]): boolean {
+    // ** matches any number of segments
+    const doubleStarIndex = patternSegments.indexOf('**');
+
+    if (doubleStarIndex === 0 && patternSegments.length === 1) {
+      // Pattern is just "**", matches everything
+      return true;
+    }
+
+    // Match segments before **
+    const beforePattern = patternSegments.slice(0, doubleStarIndex);
+    const afterPattern = patternSegments.slice(doubleStarIndex + 1);
+
+    // Check if beginning matches
+    if (beforePattern.length > 0) {
+      for (let i = 0; i < beforePattern.length; i++) {
+        if (
+          i >= pathSegments.length ||
+          (beforePattern[i] !== '*' && beforePattern[i] !== pathSegments[i])
+        ) {
+          return false;
+        }
+      }
+    }
+
+    // Check if end matches
+    if (afterPattern.length > 0) {
+      const startIndex = pathSegments.length - afterPattern.length;
+      if (startIndex < beforePattern.length) {
+        return false;
+      }
+      for (let i = 0; i < afterPattern.length; i++) {
+        if (afterPattern[i] !== '*' && afterPattern[i] !== pathSegments[startIndex + i]) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   /**

@@ -339,7 +339,7 @@ ArchUnit-TS provides a more comprehensive architecture testing framework.
 
 ## Still have questions?
 
-- 📖 Check the [API Documentation](API.md)
+- 📖 Check the [API Documentation](api/README.md)
 - 💬 Start a [Discussion](https://github.com/manjericao/ArchUnitNode/discussions)
 - 🐛 Report an [Issue](https://github.com/manjericao/ArchUnitNode/issues)
 - 📧 Email us at admin@manjericao.io

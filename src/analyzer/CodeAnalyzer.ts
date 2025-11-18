@@ -97,21 +97,38 @@ export class CodeAnalyzer {
     const errorMessage =
       error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
 
+    // Security errors - check first for specificity
     if (errorMessage.includes('path traversal') || errorMessage.includes('null byte')) {
       return 'security';
-    } else if (
-      errorMessage.includes('parse') ||
-      errorMessage.includes('syntax') ||
-      errorMessage.includes('unexpected')
-    ) {
-      return 'parse';
-    } else if (
+    }
+
+    // IO errors
+    if (
       errorMessage.includes('enoent') ||
       errorMessage.includes('eacces') ||
-      errorMessage.includes('not exist')
+      errorMessage.includes('not exist') ||
+      errorMessage.includes('no such file')
     ) {
       return 'io';
     }
+
+    // Parse errors - check for various syntax error indicators
+    if (
+      errorMessage.includes('parse') ||
+      errorMessage.includes('parsing') ||
+      errorMessage.includes('syntax') ||
+      errorMessage.includes('unexpected') ||
+      errorMessage.includes('expected') ||
+      errorMessage.includes('token') ||
+      errorMessage.includes('declaration') ||
+      errorMessage.includes('expression') ||
+      errorMessage.includes('invalid character') ||
+      // TypeScript ESLint parser specific errors
+      (error instanceof Error && error.constructor.name.includes('Parser'))
+    ) {
+      return 'parse';
+    }
+
     return 'unknown';
   }
 
