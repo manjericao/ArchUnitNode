@@ -35,6 +35,10 @@ Welcome to the ArchUnitNode documentation! This directory contains comprehensive
 - [Analysis](development/ANALYSIS.md) - Architecture and design analysis
 - [Implementation Summary](development/IMPLEMENTATION_SUMMARY.md) - Implementation details and metrics
 
+### 📝 Planning & Reports
+
+- [Planning Documents](planning/) - Coverage improvement plans, release readiness reports, and audits
+
 ### ❓ Help
 
 - [FAQ](FAQ.md) - Frequently Asked Questions
