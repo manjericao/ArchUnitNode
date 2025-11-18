@@ -345,6 +345,16 @@ export class ClassesShouldStatic {
   }
 
   /**
+   * Classes should NOT reside in a specific package
+   */
+  public notResideInPackage(packagePattern: string): StaticArchRule {
+    return new StaticArchRule((classes) => {
+      const filtered = this.applyFilters(classes);
+      return new ClassesShould(filtered).notResideInPackage(packagePattern);
+    }, `Classes should not reside in package '${packagePattern}'`);
+  }
+
+  /**
    * Classes should be annotated with a decorator
    */
   public beAnnotatedWith(decoratorName: string): StaticArchRule {
