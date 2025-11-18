@@ -31,6 +31,7 @@ Architectural metrics provide objective measurements of code quality that help y
 - **Monitor trends** - track architecture quality over time
 
 **Why Metrics Matter:**
+
 - Prevent architecture erosion
 - Justify refactoring investments
 - Set measurable quality goals
@@ -104,6 +105,7 @@ Packages Needing Attention (furthest from main sequence):
 Coupling metrics measure how interconnected your packages are. Lower coupling is generally better.
 
 #### **Afferent Coupling (Ca)**
+
 Number of classes **outside** a package that depend on classes **inside** the package.
 
 - **Higher Ca** = More dependents (stable package)
@@ -111,6 +113,7 @@ Number of classes **outside** a package that depend on classes **inside** the pa
 - **Bad for:** Utilities, infrastructure
 
 #### **Efferent Coupling (Ce)**
+
 Number of classes **inside** a package that depend on classes **outside** the package.
 
 - **Higher Ce** = More dependencies (unstable package)
@@ -118,6 +121,7 @@ Number of classes **inside** a package that depend on classes **outside** the pa
 - **Bad for:** Domain models, core business logic
 
 #### **Instability (I)**
+
 Measures how resistant to change a package is.
 
 **Formula:** `I = Ce / (Ca + Ce)`
@@ -127,10 +131,12 @@ Measures how resistant to change a package is.
 - **I = 1** → Maximally unstable (all outgoing dependencies)
 
 **Interpretation:**
+
 - Domain models should have low I (stable)
 - Application/UI layers can have high I (flexible)
 
 #### **Abstractness (A)**
+
 Ratio of abstract classes/interfaces to total classes.
 
 **Formula:** `A = Abstract Classes / Total Classes`
@@ -140,10 +146,12 @@ Ratio of abstract classes/interfaces to total classes.
 - **A = 1** → Completely abstract
 
 **Interpretation:**
+
 - Stable packages (low I) should be abstract (high A)
 - Unstable packages (high I) can be concrete (low A)
 
 #### **Distance from Main Sequence (D)**
+
 Measures how balanced a package is between abstractness and stability.
 
 **Formula:** `D = |A + I - 1|`
@@ -153,11 +161,13 @@ Measures how balanced a package is between abstractness and stability.
 - **D = 1** → Maximally unbalanced
 
 **Zones:**
+
 - **Zone of Pain** (A=0, I=0): Rigid, concrete, stable → Hard to change
 - **Zone of Uselessness** (A=1, I=1): Abstract, unstable → No value
 - **Main Sequence** (D≈0): Balanced → Healthy architecture
 
 **Example:**
+
 ```typescript
 // Access coupling metrics by package
 for (const [pkg, metrics] of metrics.coupling.entries()) {
@@ -181,20 +191,24 @@ for (const [pkg, metrics] of metrics.coupling.entries()) {
 Cohesion measures how well class members belong together. Higher cohesion is better.
 
 #### **LCOM (Lack of Cohesion of Methods)**
+
 Simplified measure of class cohesion.
 
 - **Lower LCOM** = Higher cohesion (good)
 - **Higher LCOM** = Lower cohesion (bad)
 
 **Interpretation:**
+
 - LCOM < 2: Good cohesion
 - LCOM 2-5: Moderate cohesion
 - LCOM > 5: Poor cohesion (consider splitting class)
 
 #### **Average Methods/Properties per Class**
+
 Simple counts that indicate class complexity.
 
 **Example:**
+
 ```typescript
 const { cohesion } = metrics;
 
@@ -214,6 +228,7 @@ if (cohesion.lcom > 5) {
 Complexity metrics measure how intricate the dependency structure is.
 
 #### **Average Dependencies**
+
 Mean number of dependencies per class.
 
 - **< 5**: Good
@@ -221,12 +236,14 @@ Mean number of dependencies per class.
 - **> 10**: High complexity
 
 #### **Maximum Dependencies**
+
 Highest dependency count of any single class.
 
 - Identifies coupling hotspots
 - Classes with 15+ dependencies need refactoring
 
 #### **Dependency Depth**
+
 Longest path in the dependency graph.
 
 - **Lower is better**
@@ -234,6 +251,7 @@ Longest path in the dependency graph.
 - Indicates tight coupling
 
 #### **Circular Dependencies**
+
 Number of dependency cycles detected.
 
 - **Should be 0**
@@ -241,10 +259,12 @@ Number of dependency cycles detected.
 - Break cycles with dependency inversion
 
 #### **Fan-In / Fan-Out**
+
 - **Fan-In**: How many classes depend on this class
 - **Fan-Out**: How many classes this class depends on
 
 **Example:**
+
 ```typescript
 const { complexity } = metrics;
 
@@ -271,6 +291,7 @@ highFanOut.forEach(([className, count]) => {
 Technical debt metrics estimate the cost of fixing architectural violations.
 
 #### **Total Debt Score**
+
 Overall debt on a 0-100 scale (higher is worse).
 
 - **0-20**: Low debt
@@ -279,9 +300,11 @@ Overall debt on a 0-100 scale (higher is worse).
 - **80-100**: Critical debt
 
 #### **Estimated Hours to Fix**
+
 Time estimate to resolve all violations.
 
 **Estimation Rules:**
+
 - Naming violations: 0.25h each
 - Decorator violations: 0.25h each
 - Package organization: 0.5h each
@@ -289,9 +312,11 @@ Time estimate to resolve all violations.
 - Layer violations: 2h each
 
 #### **Debt by Category**
+
 Breakdown showing where debt is concentrated.
 
 **Example:**
+
 ```typescript
 const { technicalDebt } = metrics;
 
@@ -320,6 +345,7 @@ technicalDebt.items.slice(0, 5).forEach((item) => {
 Overall health score combining all metrics.
 
 #### **Overall Score**
+
 Composite score (0-100, higher is better).
 
 - **90-100**: Excellent
@@ -330,22 +356,27 @@ Composite score (0-100, higher is better).
 #### **Component Scores**
 
 **Layering Score** - How well layers are separated
+
 - Based on coupling metrics
 - Penalizes high distance from main sequence
 
 **Dependency Score** - Quality of dependency management
+
 - Based on complexity metrics
 - Penalizes circular dependencies and high coupling
 
 **Naming Score** - Adherence to naming conventions
+
 - Based on violation count
 - Higher violations = lower score
 
 **Maintainability Index** - Long-term maintainability
+
 - Combines cohesion and overall fitness
 - Indicates how easy code is to change
 
 **Example:**
+
 ```typescript
 const { fitness } = metrics;
 
@@ -374,14 +405,15 @@ if (fitness.overallScore < 70) {
 
 **Example Package Analysis:**
 
-| Package | Ca | Ce | I | A | D | Status |
-|---------|----|----|-------|-------|-------|--------|
-| domain | 15 | 2 | 0.12 | 0.40 | **0.48** | ⚠️ Too concrete for stability |
-| services | 8 | 12 | 0.60 | 0.15 | **0.25** | ✅ Balanced |
-| controllers | 0 | 18 | 1.00 | 0.05 | **0.05** | ✅ Appropriate for UI layer |
-| utils | 20 | 0 | 0.00 | 0.00 | **1.00** | ⚠️ Zone of Pain! |
+| Package     | Ca  | Ce  | I    | A    | D        | Status                        |
+| ----------- | --- | --- | ---- | ---- | -------- | ----------------------------- |
+| domain      | 15  | 2   | 0.12 | 0.40 | **0.48** | ⚠️ Too concrete for stability |
+| services    | 8   | 12  | 0.60 | 0.15 | **0.25** | ✅ Balanced                   |
+| controllers | 0   | 18  | 1.00 | 0.05 | **0.05** | ✅ Appropriate for UI layer   |
+| utils       | 20  | 0   | 0.00 | 0.00 | **1.00** | ⚠️ Zone of Pain!              |
 
 **Recommendations:**
+
 1. **domain** (D=0.48): Increase abstractness (add interfaces)
 2. **services** (D=0.25): Good balance, maintain current design
 3. **controllers** (D=0.05): Acceptable for presentation layer
@@ -389,13 +421,13 @@ if (fitness.overallScore < 70) {
 
 ### Target Ranges
 
-| Metric | Excellent | Good | Fair | Poor |
-|--------|-----------|------|------|------|
-| Distance (D) | 0.0-0.1 | 0.1-0.3 | 0.3-0.5 | > 0.5 |
-| LCOM | < 2 | 2-3 | 3-5 | > 5 |
-| Avg Dependencies | < 5 | 5-8 | 8-12 | > 12 |
-| Circular Deps | 0 | 0 | 1-2 | > 2 |
-| Fitness Score | 90-100 | 70-89 | 50-69 | < 50 |
+| Metric           | Excellent | Good    | Fair    | Poor  |
+| ---------------- | --------- | ------- | ------- | ----- |
+| Distance (D)     | 0.0-0.1   | 0.1-0.3 | 0.3-0.5 | > 0.5 |
+| LCOM             | < 2       | 2-3     | 3-5     | > 5   |
+| Avg Dependencies | < 5       | 5-8     | 8-12    | > 12  |
+| Circular Deps    | 0         | 0       | 1-2     | > 2   |
+| Fitness Score    | 90-100    | 70-89   | 50-69   | < 50  |
 
 ---
 
@@ -416,10 +448,7 @@ const history = {
   circularDeps: metrics.complexity.circularDependencies,
 };
 
-fs.appendFileSync(
-  'metrics-history.json',
-  JSON.stringify(history) + '\n'
-);
+fs.appendFileSync('metrics-history.json', JSON.stringify(history) + '\n');
 ```
 
 ### 2. Set Quality Gates
@@ -434,7 +463,9 @@ const thresholds = {
 };
 
 if (metrics.fitness.overallScore < thresholds.minFitnessScore) {
-  throw new Error(`Architecture fitness ${metrics.fitness.overallScore} below threshold ${thresholds.minFitnessScore}`);
+  throw new Error(
+    `Architecture fitness ${metrics.fitness.overallScore} below threshold ${thresholds.minFitnessScore}`
+  );
 }
 
 if (metrics.complexity.circularDependencies > thresholds.maxCircularDeps) {
@@ -442,7 +473,9 @@ if (metrics.complexity.circularDependencies > thresholds.maxCircularDeps) {
 }
 
 if (metrics.technicalDebt.estimatedHoursToFix > thresholds.maxDebtHours) {
-  throw new Error(`Technical debt ${metrics.technicalDebt.estimatedHoursToFix}h exceeds ${thresholds.maxDebtHours}h`);
+  throw new Error(
+    `Technical debt ${metrics.technicalDebt.estimatedHoursToFix}h exceeds ${thresholds.maxDebtHours}h`
+  );
 }
 ```
 
@@ -532,6 +565,7 @@ jobs:
 ```
 
 **metrics.ts:**
+
 ```typescript
 import * as fs from 'fs';
 import { ArchUnitTS, ArchitecturalMetricsAnalyzer, ArchRuleDefinition } from 'archunit-ts';
@@ -543,8 +577,10 @@ async function main() {
   // Run your rules
   const violations = await archUnit.checkRules('./src', [
     ArchRuleDefinition.classes()
-      .that().resideInPackage('domain')
-      .should().notDependOnClassesThat()
+      .that()
+      .resideInPackage('domain')
+      .should()
+      .notDependOnClassesThat()
       .resideInPackage('infrastructure'),
   ]);
 
@@ -635,7 +671,9 @@ async function healthCheck() {
     }
 
     if (metrics.summary.worstPackages[0].distance > 0.5) {
-      console.log(`  - Packages need refactoring: ${metrics.summary.worstPackages.map(p => p.package).join(', ')}`);
+      console.log(
+        `  - Packages need refactoring: ${metrics.summary.worstPackages.map((p) => p.package).join(', ')}`
+      );
     }
   }
 
@@ -696,7 +734,8 @@ async function generateReport() {
   <table>
     <tr><th>Package</th><th>Ca</th><th>Ce</th><th>I</th><th>A</th><th>D</th></tr>
     ${Array.from(metrics.coupling.entries())
-      .map(([pkg, m]) => `
+      .map(
+        ([pkg, m]) => `
         <tr>
           <td>${pkg}</td>
           <td>${m.ca}</td>
@@ -705,7 +744,8 @@ async function generateReport() {
           <td>${m.abstractness.toFixed(3)}</td>
           <td class="${m.distance > 0.5 ? 'bad' : 'good'}">${m.distance.toFixed(3)}</td>
         </tr>
-      `)
+      `
+      )
       .join('')}
   </table>
 </body>
@@ -765,13 +805,13 @@ interface ArchitecturalMetricsResult {
 
 ```typescript
 interface CouplingMetrics {
-  ca: number;               // Afferent coupling
-  ce: number;               // Efferent coupling
-  instability: number;      // I = Ce / (Ca + Ce)
-  abstractCount: number;    // Number of abstract classes
-  totalCount: number;       // Total classes in package
-  abstractness: number;     // A = abstracts / total
-  distance: number;         // D = |A + I - 1|
+  ca: number; // Afferent coupling
+  ce: number; // Efferent coupling
+  instability: number; // I = Ce / (Ca + Ce)
+  abstractCount: number; // Number of abstract classes
+  totalCount: number; // Total classes in package
+  abstractness: number; // A = abstracts / total
+  distance: number; // D = |A + I - 1|
 }
 ```
 
@@ -779,8 +819,8 @@ interface CouplingMetrics {
 
 ```typescript
 interface CohesionMetrics {
-  lcom: number;                     // Lack of Cohesion of Methods
-  averageMethodsPerClass: number;   // Avg methods per class
+  lcom: number; // Lack of Cohesion of Methods
+  averageMethodsPerClass: number; // Avg methods per class
   averagePropertiesPerClass: number; // Avg properties per class
 }
 ```
@@ -789,12 +829,12 @@ interface CohesionMetrics {
 
 ```typescript
 interface ComplexityMetrics {
-  averageDependencies: number;      // Avg dependencies per class
-  maxDependencies: number;          // Max dependencies of any class
-  dependencyDepth: number;          // Longest dependency path
-  circularDependencies: number;     // Number of cycles
-  fanIn: Map<string, number>;       // Classes depending on this
-  fanOut: Map<string, number>;      // Classes this depends on
+  averageDependencies: number; // Avg dependencies per class
+  maxDependencies: number; // Max dependencies of any class
+  dependencyDepth: number; // Longest dependency path
+  circularDependencies: number; // Number of cycles
+  fanIn: Map<string, number>; // Classes depending on this
+  fanOut: Map<string, number>; // Classes this depends on
 }
 ```
 
@@ -802,11 +842,11 @@ interface ComplexityMetrics {
 
 ```typescript
 interface TechnicalDebt {
-  totalDebtScore: number;           // 0-100 (higher is worse)
-  estimatedHoursToFix: number;      // Time to fix all violations
+  totalDebtScore: number; // 0-100 (higher is worse)
+  estimatedHoursToFix: number; // Time to fix all violations
   debtByCategory: Map<string, number>; // Hours by category
   trend: 'improving' | 'stable' | 'worsening';
-  items: DebtItem[];                // Individual debt items
+  items: DebtItem[]; // Individual debt items
 }
 
 interface DebtItem {
@@ -821,11 +861,11 @@ interface DebtItem {
 
 ```typescript
 interface ArchitectureFitness {
-  overallScore: number;             // 0-100 (higher is better)
-  layeringScore: number;            // Layering adherence
-  namingScore: number;              // Naming conventions
-  dependencyScore: number;          // Dependency management
-  maintainabilityIndex: number;     // Overall maintainability
+  overallScore: number; // 0-100 (higher is better)
+  layeringScore: number; // Layering adherence
+  namingScore: number; // Naming conventions
+  dependencyScore: number; // Dependency management
+  maintainabilityIndex: number; // Overall maintainability
   breakdown: {
     couplingScore: number;
     cohesionScore: number;
@@ -857,5 +897,5 @@ interface ArchitectureFitness {
 
 - [Rule Composition](./RULE_COMPOSITION.md) - Combine rules with logical operators
 - [Violation Intelligence](./VIOLATION_INTELLIGENCE.md) - Smart violation analysis
-- [Testing Guide](./TESTING.md) - Test your architecture rules
-- [Patterns Library](./PATTERNS.md) - Predefined architectural patterns
+- [Testing Guide](./TESTING_UTILITIES.md) - Test your architecture rules
+- [Patterns Library](./PATTERN_LIBRARY.md) - Predefined architectural patterns
