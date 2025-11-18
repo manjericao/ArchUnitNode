@@ -4,12 +4,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 import { createTimeline, TimelineConfig } from '../../src/timeline/ArchitectureTimeline';
 import { TimelineVisualizer } from '../../src/timeline/TimelineVisualizer';
 import { ArchRuleDefinition } from '../../src/lang/ArchRuleDefinition';
 
 describe('ArchitectureTimeline', () => {
-  const testRepoPath = path.join(__dirname, '../fixtures/test-repo');
   const tempOutputDir = path.join(__dirname, '../temp-timeline-output');
 
   beforeAll(() => {
@@ -182,7 +182,6 @@ describe('ArchitectureTimeline', () => {
       const timeline = createTimeline(config);
 
       // Get HEAD and previous commit
-      const { execSync } = require('child_process');
       const head = execSync('git rev-parse HEAD', {
         cwd: process.cwd(),
         encoding: 'utf-8',
