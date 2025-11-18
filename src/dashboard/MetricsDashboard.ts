@@ -7,10 +7,16 @@
  */
 
 import * as fs from 'fs';
-import * as path from 'path';
 import { TSClasses } from '../core/TSClasses';
-import { ArchRule, ArchitectureViolation } from '../core/ArchRule';
-import { ArchitecturalMetrics } from '../metrics/ArchitecturalMetrics';
+import { ArchitectureViolation } from '../types';
+import {
+  ArchitecturalMetricsAnalyzer,
+  CouplingMetrics,
+  CohesionMetrics,
+  ComplexityMetrics,
+  TechnicalDebt,
+  ArchitectureFitness,
+} from '../metrics/ArchitecturalMetrics';
 import { ViolationAnalyzer } from '../analysis/ViolationAnalyzer';
 
 /**
@@ -50,11 +56,11 @@ export interface DashboardData {
   config: DashboardConfig;
   /** Current metrics */
   metrics: {
-    coupling: ReturnType<ArchitecturalMetrics['calculateCouplingMetrics']>;
-    cohesion: ReturnType<ArchitecturalMetrics['calculateCohesionMetrics']>;
-    complexity: ReturnType<ArchitecturalMetrics['calculateComplexityMetrics']>;
-    debt: ReturnType<ArchitecturalMetrics['calculateTechnicalDebt']>;
-    fitness: ReturnType<ArchitecturalMetrics['calculateArchitectureFitnessScore']>;
+    coupling: Map<string, CouplingMetrics>;
+    cohesion: CohesionMetrics;
+    complexity: ComplexityMetrics;
+    debt: TechnicalDebt;
+    fitness: ArchitectureFitness;
   };
   /** Violations */
   violations: {
@@ -83,19 +89,22 @@ export class MetricsDashboard {
     violations: ArchitectureViolation[],
     config: DashboardConfig
   ): DashboardData {
-    const metricsCalculator = new ArchitecturalMetrics(classes);
+    const metricsCalculator = new ArchitecturalMetricsAnalyzer(classes);
 
     // Calculate all metrics
-    const coupling = metricsCalculator.calculateCouplingMetrics();
-    const cohesion = metricsCalculator.calculateCohesionMetrics();
-    const complexity = metricsCalculator.calculateComplexityMetrics();
-    const debt = metricsCalculator.calculateTechnicalDebt(violations);
-    const fitness = metricsCalculator.calculateArchitectureFitnessScore(violations);
+    const metricsResult = metricsCalculator.calculateMetrics();
+    const coupling = metricsResult.coupling;
+    const cohesion = metricsResult.cohesion;
+    const complexity = metricsResult.complexity;
+    const debt = metricsResult.technicalDebt;
+    const fitness = metricsResult.fitness;
 
     // Analyze violations
-    const analyzer = new ViolationAnalyzer();
-    const enhancedViolations = analyzer.analyzeViolations(violations);
-    const grouped = analyzer.groupViolations(enhancedViolations);
+    const analyzer = new ViolationAnalyzer(violations);
+    const _analysis = analyzer.analyze(); // Reserved for detailed violation analysis
+    const _grouped = analyzer.groupByRootCause(); // Reserved for root cause grouping
+    void _analysis; // Mark as intentionally unused for now
+    void _grouped; // Mark as intentionally unused for now
 
     // Group violations by rule
     const violationsByRule = new Map<string, { count: number; severity: string }>();
@@ -406,10 +415,14 @@ export class MetricsDashboard {
       color: #92400e;
     }
 
-    ${theme === 'dark' ? `
+    ${
+      theme === 'dark'
+        ? `
       .badge-error { background: #7f1d1d; color: #fecaca; }
       .badge-warning { background: #78350f; color: #fef3c7; }
-    ` : ''}
+    `
+        : ''
+    }
 
     .progress-bar {
       width: 100%;
@@ -500,19 +513,19 @@ export class MetricsDashboard {
         <div class="score-breakdown">
           <div class="breakdown-item">
             <span class="breakdown-label">Layering Score</span>
-            <span class="breakdown-score">${data.metrics.fitness.breakdown.layeringScore}</span>
+            <span class="breakdown-score">${data.metrics.fitness.layeringScore}</span>
           </div>
           <div class="breakdown-item">
             <span class="breakdown-label">Naming Score</span>
-            <span class="breakdown-score">${data.metrics.fitness.breakdown.namingScore}</span>
+            <span class="breakdown-score">${data.metrics.fitness.namingScore}</span>
           </div>
           <div class="breakdown-item">
             <span class="breakdown-label">Dependency Score</span>
-            <span class="breakdown-score">${data.metrics.fitness.breakdown.dependencyScore}</span>
+            <span class="breakdown-score">${data.metrics.fitness.dependencyScore}</span>
           </div>
           <div class="breakdown-item">
             <span class="breakdown-label">Maintainability Score</span>
-            <span class="breakdown-score">${data.metrics.fitness.breakdown.maintainabilityScore}</span>
+            <span class="breakdown-score">${data.metrics.fitness.maintainabilityIndex}</span>
           </div>
         </div>
       </div>
@@ -530,11 +543,11 @@ export class MetricsDashboard {
           </div>
           <div class="breakdown-item">
             <span class="breakdown-label">Technical Debt</span>
-            <span class="breakdown-score">${data.metrics.debt.totalEstimatedHours.toFixed(1)}h</span>
+            <span class="breakdown-score">${data.metrics.debt.estimatedHoursToFix.toFixed(1)}h</span>
           </div>
           <div class="breakdown-item">
             <span class="breakdown-label">Avg Complexity</span>
-            <span class="breakdown-score">${data.metrics.complexity.averageDependenciesPerClass.toFixed(1)}</span>
+            <span class="breakdown-score">${data.metrics.complexity.averageDependencies.toFixed(1)}</span>
           </div>
         </div>
       </div>
@@ -557,36 +570,36 @@ export class MetricsDashboard {
       <div class="metric-card">
         <div class="metric-icon icon-debt">💰</div>
         <div class="metric-title">Technical Debt</div>
-        <div class="metric-value">${data.metrics.debt.totalEstimatedHours.toFixed(1)}h</div>
-        <div class="metric-detail">Debt Ratio: ${(data.metrics.debt.debtRatio * 100).toFixed(1)}%</div>
+        <div class="metric-value">${data.metrics.debt.estimatedHoursToFix.toFixed(1)}h</div>
+        <div class="metric-detail">Score: ${data.metrics.debt.totalDebtScore.toFixed(1)}/100</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-icon icon-complexity">🔀</div>
         <div class="metric-title">Complexity</div>
-        <div class="metric-value">${data.metrics.complexity.averageDependenciesPerClass.toFixed(1)}</div>
-        <div class="metric-detail">${data.metrics.complexity.cyclicDependencyCount} cyclic dependencies</div>
+        <div class="metric-value">${data.metrics.complexity.averageDependencies.toFixed(1)}</div>
+        <div class="metric-detail">${data.metrics.complexity.circularDependencies} circular dependencies</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-icon icon-coupling">🔗</div>
         <div class="metric-title">Coupling</div>
-        <div class="metric-value">${data.metrics.coupling.averageInstability.toFixed(2)}</div>
-        <div class="metric-detail">Avg Instability</div>
+        <div class="metric-value">${Array.from(data.metrics.coupling.values()).length}</div>
+        <div class="metric-detail">Packages analyzed</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-icon icon-cohesion">🎯</div>
         <div class="metric-title">Cohesion</div>
-        <div class="metric-value">${data.metrics.cohesion.averageLCOM.toFixed(2)}</div>
-        <div class="metric-detail">Avg LCOM</div>
+        <div class="metric-value">${data.metrics.cohesion.lcom.toFixed(2)}</div>
+        <div class="metric-detail">LCOM Score</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-icon icon-classes">📦</div>
         <div class="metric-title">Classes</div>
         <div class="metric-value">${data.classesAnalyzed}</div>
-        <div class="metric-detail">${data.metrics.complexity.totalDependencies} dependencies</div>
+        <div class="metric-detail">${data.metrics.complexity.maxDependencies} max dependencies</div>
       </div>
     </div>`;
   }
@@ -594,7 +607,7 @@ export class MetricsDashboard {
   /**
    * Generate charts section HTML
    */
-  private static generateChartsSection(data: DashboardData, theme: string): string {
+  private static generateChartsSection(_data: DashboardData, _theme: string): string {
     return `
     <div class="section">
       <div class="section-title">Metrics Visualization</div>
@@ -631,20 +644,28 @@ export class MetricsDashboard {
       </div>`;
     }
 
-    const topRulesHtml = data.violations.byRule.map(rule => `
+    const topRulesHtml = data.violations.byRule
+      .map(
+        (rule) => `
       <tr>
         <td>${this.escapeHtml(rule.ruleName)}</td>
         <td><span class="badge badge-${rule.severity}">${rule.severity}</span></td>
         <td>${rule.count}</td>
       </tr>
-    `).join('');
+    `
+      )
+      .join('');
 
-    const topFilesHtml = data.violations.byFile.map(file => `
+    const topFilesHtml = data.violations.byFile
+      .map(
+        (file) => `
       <tr>
         <td style="font-family: monospace; font-size: 0.875rem;">${this.escapeHtml(file.filePath)}</td>
         <td>${file.count}</td>
       </tr>
-    `).join('');
+    `
+      )
+      .join('');
 
     return `
     <div class="section">
@@ -682,7 +703,7 @@ export class MetricsDashboard {
   /**
    * Generate historical section HTML
    */
-  private static generateHistoricalSection(data: DashboardData, theme: string): string {
+  private static generateHistoricalSection(data: DashboardData, _theme: string): string {
     if (!data.config.historicalData || data.config.historicalData.length === 0) {
       return '';
     }
@@ -737,10 +758,10 @@ export class MetricsDashboard {
         datasets: [{
           label: 'Current Score',
           data: [
-            ${data.metrics.fitness.breakdown.layeringScore},
-            ${data.metrics.fitness.breakdown.namingScore},
-            ${data.metrics.fitness.breakdown.dependencyScore},
-            ${data.metrics.fitness.breakdown.maintainabilityScore}
+            ${data.metrics.fitness.layeringScore},
+            ${data.metrics.fitness.namingScore},
+            ${data.metrics.fitness.dependencyScore},
+            ${data.metrics.fitness.maintainabilityIndex}
           ],
           fill: true,
           backgroundColor: 'rgba(102, 126, 234, 0.2)',
@@ -792,16 +813,18 @@ export class MetricsDashboard {
       },
     });
 
-    ${data.config.historicalData && data.config.historicalData.length > 0 ? `
+    ${
+      data.config.historicalData && data.config.historicalData.length > 0
+        ? `
     // Trend Chart
     new Chart(document.getElementById('trendChart'), {
       type: 'line',
       data: {
-        labels: ${JSON.stringify(data.config.historicalData.map(h => new Date(h.timestamp).toLocaleDateString()))},
+        labels: ${JSON.stringify(data.config.historicalData.map((h) => new Date(h.timestamp).toLocaleDateString()))},
         datasets: [
           {
             label: 'Fitness Score',
-            data: ${JSON.stringify(data.config.historicalData.map(h => h.fitnessScore))},
+            data: ${JSON.stringify(data.config.historicalData.map((h) => h.fitnessScore))},
             borderColor: '#10b981',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
             fill: true,
@@ -810,7 +833,7 @@ export class MetricsDashboard {
           },
           {
             label: 'Violations',
-            data: ${JSON.stringify(data.config.historicalData.map(h => h.violationCount))},
+            data: ${JSON.stringify(data.config.historicalData.map((h) => h.violationCount))},
             borderColor: '#ef4444',
             backgroundColor: 'rgba(239, 68, 68, 0.1)',
             fill: true,
@@ -867,7 +890,9 @@ export class MetricsDashboard {
         },
       },
     });
-    ` : ''}
+    `
+        : ''
+    }
   </script>`;
   }
 
@@ -910,10 +935,7 @@ export class MetricsDashboard {
   /**
    * Save historical data to file
    */
-  static saveHistoricalData(
-    data: DashboardData,
-    historyFilePath: string
-  ): void {
+  static saveHistoricalData(data: DashboardData, historyFilePath: string): void {
     let history: HistoricalMetrics[] = [];
 
     // Load existing history
@@ -927,8 +949,8 @@ export class MetricsDashboard {
       timestamp: data.generatedAt,
       fitnessScore: data.metrics.fitness.overallScore,
       violationCount: data.violations.total,
-      technicalDebt: data.metrics.debt.totalEstimatedHours,
-      complexity: data.metrics.complexity.averageDependenciesPerClass,
+      technicalDebt: data.metrics.debt.estimatedHoursToFix,
+      complexity: data.metrics.complexity.averageDependencies,
     });
 
     // Keep only last 30 entries

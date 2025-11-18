@@ -19,7 +19,6 @@ export class TSClassBuilder {
   private packagePath: string = 'test';
   private dependencies: string[] = [];
   private decorators: TSDecorator[] = [];
-  private isInterface: boolean = false;
   private isAbstract: boolean = false;
   private methods: TSMethod[] = [];
   private properties: TSProperty[] = [];
@@ -67,14 +66,6 @@ export class TSClassBuilder {
         location: { filePath: this.filePath, line: 1, column: 1 },
       }))
     );
-    return this;
-  }
-
-  /**
-   * Mark as interface
-   */
-  asInterface(): this {
-    this.isInterface = true;
     return this;
   }
 

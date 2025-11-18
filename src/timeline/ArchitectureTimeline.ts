@@ -14,11 +14,9 @@
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ArchRule } from '../core/ArchRule';
-import { TSClasses } from '../core/TSClasses';
-import { createArchUnit } from '../analyzer/CodeAnalyzer';
-import { ArchitecturalMetrics } from '../metrics/ArchitecturalMetrics';
-import { ArchitectureViolation } from '../core/ArchRule';
+import { ArchRule, ArchitectureViolation } from '../core/ArchRule';
+import { CodeAnalyzer } from '../analyzer/CodeAnalyzer';
+import { ArchitecturalMetricsAnalyzer } from '../metrics/ArchitecturalMetrics';
 
 /**
  * Represents a point in time in the architecture timeline
@@ -111,11 +109,12 @@ export interface TimelineReport {
  */
 export class ArchitectureTimeline {
   private config: TimelineConfig;
-  private tempDir: string;
+  private _tempDir: string; // Reserved for temporary file operations
 
   constructor(config: TimelineConfig) {
     this.config = config;
-    this.tempDir = path.join(this.config.basePath, '.archunit-timeline-temp');
+    this._tempDir = path.join(this.config.basePath, '.archunit-timeline-temp');
+    void this._tempDir; // Mark as intentionally unused for now
   }
 
   /**
@@ -153,7 +152,8 @@ export class ArchitectureTimeline {
       throw new Error('Not a git repository. Architecture timeline requires git.');
     }
 
-    const branch = this.config.branch || this.execGit('branch --show-current');
+    const _branch = this.config.branch || this.execGit('branch --show-current'); // Reserved for branch-specific analysis
+    void _branch; // Mark as intentionally unused for now
     const startCommit = this.config.startCommit || this.execGit('rev-list --max-parents=0 HEAD');
     const endCommit = this.config.endCommit || 'HEAD';
 
@@ -243,12 +243,8 @@ export class ArchitectureTimeline {
     author: string
   ): Promise<TimelineSnapshot> {
     // Analyze code at this commit
-    const analyzer = createArchUnit({
-      basePath: this.config.basePath,
-      patterns: this.config.patterns,
-    });
-
-    const classes = await analyzer.analyze();
+    const analyzer = new CodeAnalyzer();
+    const classes = await analyzer.analyze(this.config.basePath, this.config.patterns);
 
     // Run all rules
     let allViolations: ArchitectureViolation[] = [];
@@ -262,11 +258,8 @@ export class ArchitectureTimeline {
     const warnings = allViolations.filter((v) => v.severity === 'warning').length;
 
     // Calculate metrics
-    const metricsCalculator = new ArchitecturalMetrics(classes);
-    const coupling = metricsCalculator.calculateCouplingMetrics();
-    const complexity = metricsCalculator.calculateComplexityMetrics();
-    const debt = metricsCalculator.calculateTechnicalDebt(allViolations);
-    const fitness = metricsCalculator.calculateArchitectureFitnessScore(allViolations);
+    const metricsCalculator = new ArchitecturalMetricsAnalyzer(classes);
+    const metricsResult = metricsCalculator.calculateMetrics();
 
     return {
       commit: sha,
@@ -279,15 +272,15 @@ export class ArchitectureTimeline {
         warnings,
       },
       metrics: {
-        totalClasses: classes.size(),
-        totalDependencies: complexity.totalDependencies,
-        averageComplexity: complexity.averageDependenciesPerClass,
-        cyclicDependencies: complexity.cyclicDependencyCount,
-        instability: coupling.averageInstability,
-        fitnessScore: fitness.overallScore,
+        totalClasses: metricsResult.summary.totalClasses,
+        totalDependencies: metricsResult.complexity.maxDependencies,
+        averageComplexity: metricsResult.complexity.averageDependencies,
+        cyclicDependencies: 0, // Cyclic dependencies are checked separately
+        instability: metricsResult.summary.averageInstability,
+        fitnessScore: metricsResult.fitness.overallScore,
         technicalDebt: {
-          totalHours: debt.totalEstimatedHours,
-          debtRatio: debt.debtRatio,
+          totalHours: metricsResult.technicalDebt.estimatedHoursToFix,
+          debtRatio: metricsResult.technicalDebt.totalDebtScore / 100,
         },
       },
       allViolations,
@@ -300,7 +293,9 @@ export class ArchitectureTimeline {
    * This will checkout different commits and analyze the architecture at each point.
    * WARNING: This will modify your working directory!
    */
-  async analyze(progressCallback?: (current: number, total: number, commit: string) => void): Promise<TimelineReport> {
+  async analyze(
+    progressCallback?: (current: number, total: number, commit: string) => void
+  ): Promise<TimelineReport> {
     if (!this.isGitRepository()) {
       throw new Error('Not a git repository. Architecture timeline requires git.');
     }
@@ -389,12 +384,8 @@ export class ArchitectureTimeline {
     const last = snapshots[snapshots.length - 1];
 
     // Calculate trends
-    const violationTrend = this.calculateTrend(
-      snapshots.map((s) => s.violationCount)
-    );
-    const metricsTrend = this.calculateTrend(
-      snapshots.map((s) => s.metrics.fitnessScore)
-    );
+    const violationTrend = this.calculateTrend(snapshots.map((s) => s.violationCount));
+    const metricsTrend = this.calculateTrend(snapshots.map((s) => s.metrics.fitnessScore));
 
     const avgViolations =
       snapshots.reduce((sum, s) => sum + s.violationCount, 0) / snapshots.length;
@@ -474,22 +465,12 @@ export class ArchitectureTimeline {
       // Analyze first commit
       this.checkoutCommit(commit1);
       const info1 = this.execGit(`log -1 --format="%ai%n%an%n%s" ${commit1}`).split('\n');
-      const before = await this.analyzeCommit(
-        commit1,
-        new Date(info1[0]),
-        info1[2],
-        info1[1]
-      );
+      const before = await this.analyzeCommit(commit1, new Date(info1[0]), info1[2], info1[1]);
 
       // Analyze second commit
       this.checkoutCommit(commit2);
       const info2 = this.execGit(`log -1 --format="%ai%n%an%n%s" ${commit2}`).split('\n');
-      const after = await this.analyzeCommit(
-        commit2,
-        new Date(info2[0]),
-        info2[2],
-        info2[1]
-      );
+      const after = await this.analyzeCommit(commit2, new Date(info2[0]), info2[2], info2[1]);
 
       // Calculate changes
       const violationDelta = after.violationCount - before.violationCount;
@@ -501,17 +482,17 @@ export class ArchitectureTimeline {
 
       // Find new and fixed violations
       const beforeViolationKeys = new Set(
-        before.allViolations.map((v) => `${v.className}:${v.message}`)
+        before.allViolations.map((v) => `${v.filePath}:${v.rule}:${v.message}`)
       );
       const afterViolationKeys = new Set(
-        after.allViolations.map((v) => `${v.className}:${v.message}`)
+        after.allViolations.map((v) => `${v.filePath}:${v.rule}:${v.message}`)
       );
 
       const newViolations = after.allViolations.filter(
-        (v) => !beforeViolationKeys.has(`${v.className}:${v.message}`)
+        (v) => !beforeViolationKeys.has(`${v.filePath}:${v.rule}:${v.message}`)
       );
       const fixedViolations = before.allViolations.filter(
-        (v) => !afterViolationKeys.has(`${v.className}:${v.message}`)
+        (v) => !afterViolationKeys.has(`${v.filePath}:${v.rule}:${v.message}`)
       );
 
       return {

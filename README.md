@@ -32,10 +32,10 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="API.md">API Docs</a> •
+  <a href="docs/api/README.md">API Docs</a> •
   <a href="#examples">Examples</a> •
   <a href="CONTRIBUTING.md">Contributing</a> •
-  <a href="FAQ.md">FAQ</a>
+  <a href="docs/FAQ.md">FAQ</a>
 </p>
 
 ---
@@ -219,7 +219,7 @@ Use cases:
 
 ## API Documentation
 
-See [API.md](API.md) for complete API documentation.
+See [API Documentation](docs/api/README.md) for complete API documentation.
 
 ### Entry Points
 
@@ -723,9 +723,12 @@ Catch architectural violations in CI/CD before they reach code review:
 
 ## Documentation
 
-- 📖 [API Documentation](API.md) - Complete API reference
-- ❓ [FAQ](FAQ.md) - Frequently asked questions
-- 🛣️ [Roadmap](ROADMAP.md) - Future plans and features
+- 📖 [API Documentation](docs/api/README.md) - Complete API reference
+- 📚 [Documentation](docs/README.md) - Comprehensive documentation hub
+- ❓ [FAQ](docs/FAQ.md) - Frequently asked questions
+- 🛣️ [Roadmap](docs/project/ROADMAP.md) - Future plans and features
+- 📋 [Pattern Library](docs/PATTERN_LIBRARY.md) - Pre-built architectural patterns
+- 📊 [Architectural Metrics](docs/ARCHITECTURAL_METRICS.md) - Metrics and fitness scoring
 - 🔒 [Security Policy](SECURITY.md) - Security guidelines
 - 📝 [Changelog](CHANGELOG.md) - Release history
 - 🤝 [Contributing Guide](CONTRIBUTING.md) - How to contribute

@@ -147,11 +147,12 @@ export class Spinner {
  */
 export class MultiProgressBar {
   private bars: Map<string, { current: number; total: number; label: string }>;
-  private _startTime: number; // Prefixed with _ to indicate intentionally unused
+  private _startTime: number; // Reserved for future use
 
   constructor() {
     this.bars = new Map();
     this._startTime = Date.now();
+    void this._startTime; // Mark as intentionally unused for now
   }
 
   /**

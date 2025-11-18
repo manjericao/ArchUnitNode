@@ -7,7 +7,6 @@
  */
 
 import * as fs from 'fs';
-import * as path from 'path';
 import { TimelineReport, TimelineSnapshot } from './ArchitectureTimeline';
 
 /**
@@ -37,13 +36,12 @@ export class TimelineVisualizer {
   /**
    * Generate HTML visualization
    */
-  static generateHtml(
-    report: TimelineReport,
-    options: TimelineVisualizationOptions
-  ): void {
+  static generateHtml(report: TimelineReport, options: TimelineVisualizationOptions): void {
     const title = options.title || 'Architecture Evolution Timeline';
     const width = options.width || 1200;
-    const height = options.height || 600;
+    // @ts-expect-error - Reserved for future chart rendering
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _height = options.height || 600;
     const theme = options.theme || 'light';
     const includeViolationDetails = options.includeViolationDetails !== false;
 
@@ -494,8 +492,10 @@ export class TimelineVisualizer {
   /**
    * Generate timeline table HTML
    */
-  private static generateTimelineTable(snapshots: TimelineSnapshot[], theme: string): string {
-    const rows = snapshots.map(snapshot => `
+  private static generateTimelineTable(snapshots: TimelineSnapshot[], _theme: string): string {
+    const rows = snapshots
+      .map(
+        (snapshot) => `
       <tr>
         <td><span class="commit-hash">${this.escapeHtml(snapshot.commit.substring(0, 7))}</span></td>
         <td>${new Date(snapshot.date).toLocaleDateString()}</td>
@@ -508,7 +508,9 @@ export class TimelineVisualizer {
         <td>${snapshot.metrics.totalClasses}</td>
         <td>${snapshot.metrics.technicalDebt.totalHours.toFixed(1)}h</td>
       </tr>
-    `).join('');
+    `
+      )
+      .join('');
 
     return `
       <div class="timeline-table">
@@ -606,7 +608,7 @@ export class TimelineVisualizer {
 
 | Commit | Date | Message | Violations | Fitness | Technical Debt |
 |--------|------|---------|------------|---------|----------------|
-${report.snapshots.map(s => `| \`${s.commit.substring(0, 7)}\` | ${new Date(s.date).toLocaleDateString()} | ${s.message.substring(0, 40)} | ${s.violationCount} (${s.violations.errors}E/${s.violations.warnings}W) | ${s.metrics.fitnessScore.toFixed(1)} | ${s.metrics.technicalDebt.totalHours.toFixed(1)}h |`).join('\n')}
+${report.snapshots.map((s) => `| \`${s.commit.substring(0, 7)}\` | ${new Date(s.date).toLocaleDateString()} | ${s.message.substring(0, 40)} | ${s.violationCount} (${s.violations.errors}E/${s.violations.warnings}W) | ${s.metrics.fitnessScore.toFixed(1)} | ${s.metrics.technicalDebt.totalHours.toFixed(1)}h |`).join('\n')}
 
 ## Trends
 

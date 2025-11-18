@@ -11,7 +11,7 @@ import { createArchUnit } from '../index';
 import { loadConfig } from '../config/ConfigLoader';
 import { createReportManager } from '../reports/ReportManager';
 import { MetricsDashboard } from '../dashboard/MetricsDashboard';
-import { ArchitecturalMetrics } from '../metrics';
+import { ArchitecturalMetricsAnalyzer } from '../metrics/ArchitecturalMetrics';
 
 /**
  * Main action function
@@ -21,7 +21,8 @@ async function run(): Promise<void> {
     // Get inputs
     const configPath = core.getInput('config-path') || 'archunit.config.js';
     const basePath = core.getInput('base-path') || '.';
-    const patternsInput = core.getInput('patterns') || 'src/**/*.ts,src/**/*.tsx,src/**/*.js,src/**/*.jsx';
+    const patternsInput =
+      core.getInput('patterns') || 'src/**/*.ts,src/**/*.tsx,src/**/*.js,src/**/*.jsx';
     const failOnViolations = core.getInput('fail-on-violations') === 'true';
     const reportFormat = core.getInput('report-format') || 'html';
     const reportOutput = core.getInput('report-output') || 'archunit-report.html';
@@ -67,8 +68,9 @@ async function run(): Promise<void> {
     const warnings = violations.filter((v) => v.severity === 'warning').length;
 
     // Calculate metrics
-    const metricsCalculator = new ArchitecturalMetrics(classes);
-    const fitness = metricsCalculator.calculateArchitectureFitnessScore(violations);
+    const metricsCalculator = new ArchitecturalMetricsAnalyzer(classes);
+    const metricsResult = metricsCalculator.calculateMetrics();
+    const fitness = metricsResult.fitness;
 
     // Output results
     core.info('');
@@ -88,18 +90,12 @@ async function run(): Promise<void> {
     // Generate report
     if (reportFormat) {
       core.info(`📄 Generating ${reportFormat} report...`);
-      const reportManager = createReportManager({
-        title: 'ArchUnitNode Report',
-        includeMetrics: true,
-        includeGraph: false,
-      });
+      const reportManager = createReportManager();
 
-      const reportPath = await reportManager.generateReport(
-        classes,
-        violations,
-        reportFormat as any,
-        reportOutput
-      );
+      const reportPath = await reportManager.generateReport(violations, {
+        format: reportFormat as any,
+        outputPath: reportOutput,
+      });
 
       core.info(`Report saved to: ${reportPath}`);
       core.setOutput('report-path', reportPath);
@@ -152,7 +148,9 @@ async function run(): Promise<void> {
         );
       }
     } else if (violations.length > 0) {
-      core.warning(`⚠️  Found ${violations.length} violation(s) (${errors} errors, ${warnings} warnings)`);
+      core.warning(
+        `⚠️  Found ${violations.length} violation(s) (${errors} errors, ${warnings} warnings)`
+      );
     } else {
       core.info('✅ No architecture violations found!');
     }
