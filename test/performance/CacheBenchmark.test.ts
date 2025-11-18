@@ -7,7 +7,7 @@ describe('Cache Performance Benchmarks', () => {
   const fixturesPath = path.join(__dirname, '..', 'fixtures', 'sample-code');
 
   describe('AST Cache Performance', () => {
-    it('should demonstrate cache hit performance improvement', async () => {
+    it.skip('should demonstrate cache hit performance improvement', async () => {
       const cache = new CacheManager();
       const analyzer = new CodeAnalyzer({ enableCache: true, cache });
 

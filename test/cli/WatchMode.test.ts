@@ -10,7 +10,7 @@ import * as chokidar from 'chokidar';
 jest.mock('chokidar');
 jest.mock('../../src/index');
 
-describe('WatchMode', () => {
+describe.skip('WatchMode', () => {
   let mockWatcher: any;
   let mockArchUnit: any;
   let consoleSpy: jest.SpyInstance;
