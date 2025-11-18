@@ -33,6 +33,19 @@ export class TSClasses {
   }
 
   /**
+   * Filter classes that reside in any of the specified packages
+   * @param packagePatterns - One or more package patterns to match
+   * @returns A collection containing classes from any of the specified packages
+   */
+  public resideInAnyPackage(...packagePatterns: string[]): TSClasses {
+    let result = new TSClasses();
+    for (const pattern of packagePatterns) {
+      result = result.merge(this.resideInPackage(pattern));
+    }
+    return result;
+  }
+
+  /**
    * Filter classes that have a specific decorator
    */
   public areAnnotatedWith(decoratorName: string): TSClasses {

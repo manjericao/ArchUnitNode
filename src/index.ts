@@ -33,24 +33,58 @@ export { CodeAnalyzer } from './analyzer/CodeAnalyzer';
 export type { ParseError, AnalysisResult } from './analyzer/CodeAnalyzer';
 
 // Fluent API
-export { ArchRuleDefinition, StaticArchRule } from './lang/ArchRuleDefinition';
+export {
+  ArchRuleDefinition,
+  StaticArchRule,
+  ClassesSelector,
+  NoClassesSelector,
+  ClassesThatStatic,
+  ClassesShouldStatic,
+  StaticClassesDependencyShould,
+} from './lang/ArchRuleDefinition';
 export { ClassesThat } from './lang/syntax/ClassesThat';
 export { ClassesShould } from './lang/syntax/ClassesShould';
 
-// Library (predefined patterns)
+// Rule Composition
+export { RuleComposer, CompositeRule, type LogicalOperator } from './composition';
+
+// Violation Analysis
 export {
-  Architectures,
-  CleanArchitecture,
-  DDDArchitecture,
-  MicroservicesArchitecture,
-  cleanArchitecture,
-  dddArchitecture,
-  microservicesArchitecture,
-} from './library/Architectures';
-export { LayeredArchitecture, layeredArchitecture } from './library/LayeredArchitecture';
+  ViolationAnalyzer,
+  type EnhancedViolation,
+  type ViolationGroup,
+  type ViolationAnalysis,
+  SuggestionEngine,
+  type SuggestedFix,
+} from './analysis';
+
+// Architectural Metrics
+export {
+  ArchitecturalMetricsAnalyzer,
+  type CouplingMetrics,
+  type CohesionMetrics,
+  type ComplexityMetrics,
+  type TechnicalDebt,
+  type DebtItem,
+  type ArchitectureFitness,
+  type ArchitecturalMetricsResult,
+} from './metrics';
+
+// Library (architectural patterns)
+export * from './library';
+
+// Testing Utilities
+export * from './testing';
 
 // Cache
-export { CacheManager, getGlobalCache, resetGlobalCache } from './cache/CacheManager';
+export {
+  CacheManager,
+  getGlobalCache,
+  resetGlobalCache,
+  type CacheOptions,
+  type CacheStats,
+  type CacheTierStats,
+} from './cache/CacheManager';
 
 // Configuration
 export {
@@ -83,6 +117,14 @@ export {
   HtmlGraphGenerator,
   HtmlGraphOptions,
 } from './graph';
+
+// Framework Detection
+export {
+  FrameworkDetector,
+  type DetectedFramework,
+  type RuleSuggestion,
+  type FrameworkDetectionResult,
+} from './framework';
 
 // Convenience exports for common patterns
 export const { classes, noClasses, allClasses } = ArchRuleDefinition;

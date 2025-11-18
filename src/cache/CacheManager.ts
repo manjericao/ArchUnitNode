@@ -13,6 +13,42 @@ interface CacheEntry<T> {
 }
 
 /**
+ * Options for configuring the cache manager
+ */
+export interface CacheOptions {
+  /** Maximum number of entries per cache tier (default: 1000) */
+  maxCacheSize?: number;
+  /** Time-to-live for cache entries in milliseconds (default: 5 minutes) */
+  cacheTTL?: number;
+}
+
+/**
+ * Statistics for a single cache tier
+ */
+export interface CacheTierStats {
+  /** Number of entries in the cache */
+  size: number;
+  /** Number of cache hits */
+  hits: number;
+  /** Number of cache misses */
+  misses: number;
+  /** Hit rate (hits / (hits + misses)) */
+  hitRate: number;
+}
+
+/**
+ * Overall cache statistics for all tiers
+ */
+export interface CacheStats {
+  /** AST cache tier statistics */
+  astCache: CacheTierStats;
+  /** Module cache tier statistics */
+  moduleCache: CacheTierStats;
+  /** Rule cache tier statistics */
+  ruleCache: CacheTierStats;
+}
+
+/**
  * 3-tier caching system for ArchUnit-TS
  *
  * Tier 1: File AST cache (hash-based)
@@ -34,12 +70,7 @@ export class CacheManager {
   private ruleHits = 0;
   private ruleMisses = 0;
 
-  constructor(
-    options: {
-      maxCacheSize?: number;
-      cacheTTL?: number;
-    } = {}
-  ) {
+  constructor(options: CacheOptions = {}) {
     this.astCache = new Map();
     this.moduleCache = new Map();
     this.ruleCache = new Map();
@@ -192,11 +223,7 @@ export class CacheManager {
   /**
    * Get cache statistics
    */
-  public getStats(): {
-    astCache: { size: number; hits: number; misses: number; hitRate: number };
-    moduleCache: { size: number; hits: number; misses: number; hitRate: number };
-    ruleCache: { size: number; hits: number; misses: number; hitRate: number };
-  } {
+  public getStats(): CacheStats {
     return {
       astCache: {
         size: this.astCache.size,

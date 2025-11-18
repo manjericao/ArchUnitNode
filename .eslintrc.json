@@ -12,6 +12,7 @@
     "es6": true,
     "jest": true
   },
+  "ignorePatterns": ["test/temp-*/**"],
   "rules": {
     "@typescript-eslint/explicit-function-return-type": "warn",
     "@typescript-eslint/no-explicit-any": "warn",

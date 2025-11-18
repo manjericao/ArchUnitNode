@@ -58,8 +58,10 @@ node_modules
 /coverage-load/
 /coverage-unit/
 
-# Generated documentation
+# Generated documentation (but keep markdown docs)
 docs/
+!docs/*.md
 
 # Husky
 .husky/_/
+test/temp-*/

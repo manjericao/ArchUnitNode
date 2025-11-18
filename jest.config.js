@@ -26,9 +26,12 @@ module.exports = {
   restoreMocks: true,
   testTimeout: 10000,
   maxWorkers: '50%',
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.test.json',
-    },
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.test.json',
+      },
+    ],
   },
 };

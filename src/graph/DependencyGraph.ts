@@ -191,48 +191,54 @@ export class DependencyGraph {
 
   /**
    * Find all cycles in the graph
+   * Optimized for memory efficiency with improved DFS algorithm
    */
   public findCycles(): string[][] {
     const cycles: string[][] = [];
     const visited = new Set<string>();
-    const recursionStack: string[] = [];
+    const inStack = new Set<string>(); // More efficient than indexOf on array
+    const stack: string[] = [];
+    const uniqueCycles = new Set<string>(); // Deduplicate during traversal
 
     const findCyclesDFS = (nodeId: string): void => {
       visited.add(nodeId);
-      recursionStack.push(nodeId);
+      inStack.add(nodeId);
+      stack.push(nodeId);
 
       const neighbors = this.getDependencies(nodeId);
       for (const neighbor of neighbors) {
-        if (!visited.has(neighbor)) {
-          findCyclesDFS(neighbor);
-        } else {
-          const cycleStartIndex = recursionStack.indexOf(neighbor);
-          if (cycleStartIndex !== -1) {
-            const cycle = recursionStack.slice(cycleStartIndex);
-            cycles.push([...cycle, neighbor]);
+        // If neighbor is in current recursion stack, we found a cycle
+        if (inStack.has(neighbor)) {
+          // Extract the cycle from stack
+          const cycleStartIndex = stack.indexOf(neighbor);
+          const cycle = stack.slice(cycleStartIndex);
+          cycle.push(neighbor); // Complete the cycle
+
+          // Deduplicate on-the-fly using normalized form
+          const normalized = [...cycle].sort().join('->');
+          if (!uniqueCycles.has(normalized)) {
+            uniqueCycles.add(normalized);
+            cycles.push(cycle);
           }
+        } else if (!visited.has(neighbor)) {
+          // Continue DFS for unvisited nodes
+          findCyclesDFS(neighbor);
         }
       }
 
-      recursionStack.pop();
+      // Backtrack
+      stack.pop();
+      inStack.delete(nodeId);
     };
 
+    // Single traversal of all nodes
     for (const nodeId of this.nodes.keys()) {
-      visited.clear();
-      recursionStack.length = 0;
-      findCyclesDFS(nodeId);
+      if (!visited.has(nodeId)) {
+        findCyclesDFS(nodeId);
+      }
     }
 
-    // Deduplicate cycles
-    const uniqueCycles = new Set<string>();
-    return cycles.filter((cycle) => {
-      const normalized = [...cycle].sort().join('->');
-      if (uniqueCycles.has(normalized)) {
-        return false;
-      }
-      uniqueCycles.add(normalized);
-      return true;
-    });
+    return cycles;
   }
 
   /**

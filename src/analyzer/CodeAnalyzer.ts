@@ -25,15 +25,63 @@ export interface AnalysisResult {
 }
 
 /**
- * Analyzes TypeScript/JavaScript codebases
+ * Analyzes TypeScript/JavaScript codebases to extract class information,
+ * dependencies, and architectural structure.
+ *
+ * @example
+ * ```typescript
+ * const analyzer = new CodeAnalyzer({ enableCache: true });
+ * const classes = await analyzer.analyze('./src');
+ * ```
+ *
+ * @example
+ * // With error handling
+ * ```typescript
+ * const result = await analyzer.analyzeWithErrors('./src');
+ * console.log(`Analyzed ${result.filesProcessed} files`);
+ * console.log(`Errors: ${result.errors.length}`);
+ * ```
  */
+/**
+ * Incremental analysis state for tracking changes
+ */
+interface IncrementalState {
+  /** Timestamp of last analysis */
+  lastAnalysisTime: number;
+  /** Set of file paths analyzed in the last run */
+  analyzedFiles: Set<string>;
+  /** Last analysis result */
+  lastResult: AnalysisResult;
+}
+
 export class CodeAnalyzer {
   private parser: TypeScriptParser;
   private modules: Map<string, TSModule>;
   private dependencies: Dependency[];
   private cache: CacheManager;
   private enableCache: boolean;
+  private incrementalState: IncrementalState | null = null;
 
+  /**
+   * Creates a new CodeAnalyzer instance
+   *
+   * @param options Configuration options
+   * @param options.enableCache Enable caching of parsed ASTs (default: true)
+   * @param options.cache Custom cache manager instance (default: global cache)
+   *
+   * @example
+   * ```typescript
+   * // With caching enabled (default)
+   * const analyzer = new CodeAnalyzer();
+   *
+   * // With custom cache
+   * const customCache = new CacheManager({ maxCacheSize: 500 });
+   * const analyzer = new CodeAnalyzer({ cache: customCache });
+   *
+   * // With caching disabled
+   * const analyzer = new CodeAnalyzer({ enableCache: false });
+   * ```
+   */
   constructor(options: { enableCache?: boolean; cache?: CacheManager } = {}) {
     this.parser = new TypeScriptParser();
     this.modules = new Map();
@@ -68,7 +116,21 @@ export class CodeAnalyzer {
   }
 
   /**
-   * Analyze files matching a pattern (legacy method for backward compatibility)
+   * Analyze files matching a pattern (legacy method for backward compatibility).
+   * Logs errors to console but does not throw. Use analyzeWithErrors() for detailed error information.
+   *
+   * @param basePath Base directory to start analysis from
+   * @param patterns Glob patterns for files to analyze (default: TypeScript and JavaScript files)
+   * @returns Collection of analyzed classes
+   *
+   * @example
+   * ```typescript
+   * const analyzer = new CodeAnalyzer();
+   * const classes = await analyzer.analyze('./src');
+   *
+   * // With custom patterns
+   * const tsOnly = await analyzer.analyze('./src', ['** /*.ts']);
+   * ```
    */
   public async analyze(
     basePath: string,
@@ -88,7 +150,47 @@ export class CodeAnalyzer {
   }
 
   /**
-   * Analyze files matching a pattern and return detailed error information
+   * Analyze files matching a pattern and return detailed error information.
+   * This method provides graceful error handling by continuing analysis even when
+   * individual files fail to parse, and returns comprehensive error details.
+   *
+   * @param basePath Base directory to start analysis from
+   * @param patterns Glob patterns for files to analyze (default: TypeScript and JavaScript files)
+   * @returns Analysis result containing classes, errors, and statistics
+   *
+   * @remarks
+   * Error types:
+   * - `parse`: Syntax errors in TypeScript/JavaScript files
+   * - `security`: Path traversal attempts or other security violations
+   * - `io`: File system errors (ENOENT, EACCES, etc.)
+   * - `unknown`: Unclassified errors
+   *
+   * @example
+   * ```typescript
+   * const analyzer = new CodeAnalyzer();
+   * const result = await analyzer.analyzeWithErrors('./src');
+   *
+   * console.log(`Successfully analyzed ${result.filesProcessed} files`);
+   * console.log(`Skipped ${result.filesSkipped} files due to errors`);
+   *
+   * // Handle errors by type
+   * const securityErrors = result.errors.filter(e => e.errorType === 'security');
+   * const parseErrors = result.errors.filter(e => e.errorType === 'parse');
+   *
+   * // Use the successfully analyzed classes
+   * const classes = result.classes;
+   * ```
+   *
+   * @example
+   * @example
+   * // Analyzing specific file types
+   * ```typescript
+   * const result = await analyzer.analyzeWithErrors('./src', [
+   *   '** /*.ts',
+   *   '!** /*.test.ts', // Exclude test files
+   *   '!** /node_modules/** '
+   * ]);
+   * ```
    */
   public async analyzeWithErrors(
     basePath: string,
@@ -175,6 +277,198 @@ export class CodeAnalyzer {
       filesProcessed: files.length - errors.length,
       filesSkipped: errors.length,
     };
+  }
+
+  /**
+   * Perform incremental analysis by only processing changed, added, or deleted files.
+   * This method is optimized for watch mode and repeated analysis scenarios.
+   *
+   * On the first call, performs a full analysis. On subsequent calls:
+   * - Detects new files and processes them
+   * - Detects deleted files and removes them from results
+   * - Detects modified files (via cache hash validation) and re-processes them
+   * - Reuses cached results for unchanged files
+   *
+   * @param basePath Base directory to start analysis from
+   * @param patterns Glob patterns for files to analyze (default: TypeScript and JavaScript files)
+   * @returns Analysis result with incremental statistics
+   *
+   * @example
+   * ```typescript
+   * const analyzer = new CodeAnalyzer({ enableCache: true });
+   *
+   * // First call - full analysis
+   * const result1 = await analyzer.analyzeIncremental('./src');
+   * console.log(`Initial: ${result1.filesProcessed} files`);
+   *
+   * // Second call - only processes changes
+   * const result2 = await analyzer.analyzeIncremental('./src');
+   * console.log(`Incremental: ${result2.filesProcessed} files processed`);
+   * ```
+   */
+  public async analyzeIncremental(
+    basePath: string,
+    patterns: string[] = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']
+  ): Promise<AnalysisResult> {
+    const currentFiles = await this.findFiles(basePath, patterns);
+    const currentFileSet = new Set(currentFiles);
+
+    // If this is the first run, do a full analysis
+    if (!this.incrementalState) {
+      const result = await this.analyzeWithErrors(basePath, patterns);
+      this.incrementalState = {
+        lastAnalysisTime: Date.now(),
+        analyzedFiles: currentFileSet,
+        lastResult: result,
+      };
+      return result;
+    }
+
+    // Detect changes
+    const previousFiles = this.incrementalState.analyzedFiles;
+    const addedFiles: string[] = [];
+    const deletedFiles: string[] = [];
+    const potentiallyChangedFiles: string[] = [];
+
+    // Find added and potentially changed files
+    for (const file of currentFiles) {
+      if (!previousFiles.has(file)) {
+        addedFiles.push(file);
+      } else {
+        // File exists in both - might have changed
+        potentiallyChangedFiles.push(file);
+      }
+    }
+
+    // Find deleted files
+    for (const file of previousFiles) {
+      if (!currentFileSet.has(file)) {
+        deletedFiles.push(file);
+      }
+    }
+
+    // If nothing changed, return cached result
+    if (addedFiles.length === 0 && deletedFiles.length === 0) {
+      // Still need to check if any files were modified
+      // The cache will handle this automatically - if file hash changed, cache returns null
+      let hasChanges = false;
+      for (const file of potentiallyChangedFiles) {
+        if (this.enableCache && this.cache.getAST(file) === null) {
+          hasChanges = true;
+          break;
+        }
+      }
+
+      if (!hasChanges) {
+        // No changes at all - return cached result
+        return this.incrementalState.lastResult;
+      }
+    }
+
+    // Process only changed/new files
+    const filesToProcess = [...addedFiles, ...potentiallyChangedFiles];
+    const classes: TSClass[] = [];
+    const errors: ParseError[] = [];
+
+    // Parse changed files
+    const parseResults = await Promise.allSettled(
+      filesToProcess.map(async (file) => {
+        try {
+          let module: TSModule | null = null;
+
+          // Check cache first
+          if (this.enableCache) {
+            module = this.cache.getAST(file);
+          }
+
+          // If cache miss (new or modified file), parse it
+          if (!module) {
+            module = this.parser.parseFile(file);
+            if (this.enableCache && module) {
+              this.cache.setAST(file, module);
+            }
+            return { file, module, error: null, wasProcessed: true };
+          }
+
+          // Cache hit - file unchanged
+          return { file, module, error: null, wasProcessed: false };
+        } catch (error) {
+          return { file, module: null, error, wasProcessed: true };
+        }
+      })
+    );
+
+    // Track processed files
+    let actuallyProcessed = 0;
+
+    // Process parse results
+    for (const result of parseResults) {
+      if (result.status === 'fulfilled' && result.value.module) {
+        const { file, module, wasProcessed } = result.value;
+
+        if (wasProcessed) {
+          actuallyProcessed++;
+        }
+
+        this.modules.set(file, module);
+
+        for (const classData of module.classes) {
+          const classWithImports = {
+            ...classData,
+            imports: module.imports,
+          };
+          classes.push(new TSClass(classWithImports));
+        }
+
+        this.analyzeDependencies(module);
+      } else if (result.status === 'fulfilled' && result.value.error) {
+        actuallyProcessed++;
+        const err =
+          result.value.error instanceof Error
+            ? result.value.error
+            : new Error(String(result.value.error));
+
+        errors.push({
+          file: result.value.file,
+          error: err,
+          errorType: this.categorizeError(err),
+        });
+      }
+    }
+
+    // Merge with previous unchanged classes
+    const deletedFileSet = new Set(deletedFiles);
+    const processedFileSet = new Set(filesToProcess);
+
+    // Get classes from previous analysis that weren't deleted or re-processed
+    const previousClasses = this.incrementalState.lastResult.classes.getAll().filter((cls) => {
+      return !deletedFileSet.has(cls.filePath) && !processedFileSet.has(cls.filePath);
+    });
+
+    const allClasses = [...classes, ...previousClasses];
+
+    const result: AnalysisResult = {
+      classes: new TSClasses(allClasses),
+      errors,
+      filesProcessed: actuallyProcessed,
+      filesSkipped: errors.length,
+    };
+
+    // Update incremental state
+    this.incrementalState = {
+      lastAnalysisTime: Date.now(),
+      analyzedFiles: currentFileSet,
+      lastResult: result,
+    };
+
+    return result;
+  }
+
+  /**
+   * Reset incremental analysis state, forcing a full re-analysis on next call
+   */
+  public resetIncrementalState(): void {
+    this.incrementalState = null;
   }
 
   /**
