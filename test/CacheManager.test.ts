@@ -204,13 +204,15 @@ describe('CacheManager', () => {
         const mockClass: TSClassInterface = {
           name: 'TestClass',
           filePath: testFilePath,
+          module: 'test',
           decorators: [],
           methods: [],
           properties: [],
-
           implements: [],
           imports: [],
-          exports: [],
+          isAbstract: false,
+          isExported: true,
+          location: { filePath: testFilePath, line: 1, column: 0 },
         };
         const mockClasses = [new TSClass(mockClass)];
 
@@ -256,26 +258,30 @@ describe('CacheManager', () => {
           new TSClass({
             name: 'Class1',
             filePath: 'file1.ts',
+            module: 'test1',
             decorators: [],
             methods: [],
             properties: [],
-
             implements: [],
             imports: [],
-            exports: [],
+            isAbstract: false,
+            isExported: true,
+            location: { filePath: 'file1.ts', line: 1, column: 0 },
           }),
         ];
         const mockClasses2 = [
           new TSClass({
             name: 'Class2',
             filePath: 'file2.ts',
+            module: 'test2',
             decorators: [],
             methods: [],
             properties: [],
-
             implements: [],
             imports: [],
-            exports: [],
+            isAbstract: false,
+            isExported: true,
+            location: { filePath: 'file2.ts', line: 1, column: 0 },
           }),
         ];
 

@@ -28,6 +28,13 @@ export class ClassesShould {
   }
 
   /**
+   * Classes should NOT reside in a specific package (alias for resideOutsideOfPackage)
+   */
+  public notResideInPackage(packagePattern: string): ArchRule {
+    return new PackageRule(this.tsClasses, packagePattern, true);
+  }
+
+  /**
    * Classes should be annotated with a decorator
    */
   public beAnnotatedWith(decoratorName: string): ArchRule {
@@ -60,6 +67,34 @@ export class ClassesShould {
    */
   public haveSimpleNameStartingWith(prefix: string): ArchRule {
     return new NamingRule(this.tsClasses, prefix, 'startingWith');
+  }
+
+  /**
+   * Classes should NOT have a specific simple name (exact match)
+   */
+  public notHaveSimpleName(name: string): ArchRule {
+    return new NotSimpleNameRule(this.tsClasses, name);
+  }
+
+  /**
+   * Classes should NOT have names matching a pattern
+   */
+  public notHaveSimpleNameMatching(pattern: RegExp | string): ArchRule {
+    return new NotNamingRule(this.tsClasses, pattern, 'matching');
+  }
+
+  /**
+   * Classes should NOT have names ending with a suffix
+   */
+  public notHaveSimpleNameEndingWith(suffix: string): ArchRule {
+    return new NotNamingRule(this.tsClasses, suffix, 'endingWith');
+  }
+
+  /**
+   * Classes should NOT have names starting with a prefix
+   */
+  public notHaveSimpleNameStartingWith(prefix: string): ArchRule {
+    return new NotNamingRule(this.tsClasses, prefix, 'startingWith');
   }
 
   /**
@@ -903,6 +938,81 @@ class AssignableFromRule extends BaseArchRule {
         violations.push(
           this.createViolation(
             `Class '${cls.name}' is not assignable from '${this.className}'`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking that classes do NOT match naming patterns
+ */
+class NotNamingRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private pattern: RegExp | string,
+    private type: 'matching' | 'endingWith' | 'startingWith'
+  ) {
+    super(`Classes should not have simple name ${type} '${pattern}'`);
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      let matches = false;
+
+      switch (this.type) {
+        case 'matching':
+          matches = cls.hasSimpleNameMatching(this.pattern);
+          break;
+        case 'endingWith':
+          matches = cls.hasSimpleNameEndingWith(this.pattern as string);
+          break;
+        case 'startingWith':
+          matches = cls.hasSimpleNameStartingWith(this.pattern as string);
+          break;
+      }
+
+      if (matches) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' should not have simple name ${this.type} '${this.pattern}'`,
+            cls.filePath,
+            this.description
+          )
+        );
+      }
+    }
+
+    return violations;
+  }
+}
+
+/**
+ * Rule for checking that classes do NOT have a specific simple name (exact match)
+ */
+class NotSimpleNameRule extends BaseArchRule {
+  constructor(
+    private classes: TSClasses,
+    private name: string
+  ) {
+    super(`Classes should not have simple name '${name}'`);
+  }
+
+  check(): ArchitectureViolation[] {
+    const violations: ArchitectureViolation[] = [];
+
+    for (const cls of this.classes.getAll()) {
+      if (cls.name === this.name) {
+        violations.push(
+          this.createViolation(
+            `Class '${cls.name}' should not have simple name '${this.name}'`,
             cls.filePath,
             this.description
           )

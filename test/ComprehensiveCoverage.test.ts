@@ -92,20 +92,20 @@ describe('Comprehensive Coverage Tests', () => {
 
     it('should add class to collection', () => {
       const newCollection = new TSClasses();
-      const sampleClass = new TSClass(
-        'TestClass',
-        '/test/path.ts',
-        'test/module',
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        false,
-        false
-      );
+      const sampleClass = new TSClass({
+        name: 'TestClass',
+        filePath: '/test/path.ts',
+        module: 'test/module',
+        implements: [],
+        decorators: [],
+        methods: [],
+        properties: [],
+        isAbstract: false,
+        isExported: false,
+        location: { filePath: '/test/path.ts', line: 1, column: 0 },
+        imports: [],
+        dependencies: [],
+      });
       newCollection.add(sampleClass);
       expect(newCollection.size()).toBe(1);
     });
